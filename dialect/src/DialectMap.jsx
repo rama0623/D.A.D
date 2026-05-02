@@ -187,13 +187,42 @@ const PANEL_CSS = `
   input[type=range].tl-slider { -webkit-appearance:none; width:100%; height:3px; background:rgba(124,58,237,0.25); border-radius:2px; outline:none; cursor:pointer; }
   input[type=range].tl-slider::-webkit-slider-thumb { -webkit-appearance:none; width:15px; height:15px; background:linear-gradient(135deg,#7c3aed,#a78bfa); border-radius:50%; cursor:pointer; border:2px solid #1a1030; box-shadow:0 0 6px rgba(167,139,250,0.5); }
   .hint-pill { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); background:rgba(10,8,18,0.82); color:rgba(196,181,253,0.9); padding:9px 22px; border-radius:20px; font-family:'Space Mono',monospace; font-size:11.5px; pointer-events:none; border:1px solid rgba(124,58,237,0.35); backdrop-filter:blur(8px); white-space:nowrap; }
+  .mapboxgl-popup-content { background:#0f0a1e !important; border:1px solid rgba(124,58,237,0.45) !important; border-radius:12px !important; padding:14px !important; box-shadow:0 6px 28px rgba(0,0,0,0.8) !important; font-family:'Space Mono',monospace; }
+  .mapboxgl-popup-close-button { color:#c4b5fd !important; font-size:18px !important; top:8px !important; right:10px !important; background:none !important; }
+  .mapboxgl-popup-close-button:hover { color:#fff !important; }
+  .mapboxgl-popup-tip { border-top-color:#0f0a1e !important; }
 `;
+
+// Converts recording rows from Supabase into a Mapbox-ready GeoJSON FeatureCollection.
+// Only includes rows that have been geocoded (lat/lng not null).
+function recordingsToGeoJSON(recordings) {
+  return {
+    type: 'FeatureCollection',
+    features: recordings.map(r => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [r.longitude, r.latitude] },
+      properties: {
+        id: r.id,
+        language_name: r.language_name,
+        country_name: r.country_name,
+        region: r.region ?? '',
+        town: r.town ?? '',
+        description: r.description,
+        audio_url: r.audio_url,
+        last_speaker_flag: r.last_speaker_flag ?? false,
+        speaker_age_range: r.speaker_age_range ?? '',
+      },
+    })),
+  };
+}
 
 function DialectMap() {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const hoveredIdRef = useRef(null);
   const selectedIdRef = useRef(null);
+  const recordingsRef = useRef([]);
+  const popupRef = useRef(null);
 
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
@@ -231,6 +260,7 @@ function DialectMap() {
     setTimelineIndex(i);
   }, [clearSpeech]);
 
+
   useEffect(() => {
     mapboxgl.accessToken = 'pk.eyJ1IjoiZ2RyNjY0IiwiYSI6ImNtbTNnemljNjAwb3cycXF5Y2VuZGNoamwifQ.OcRTxaB1n23tj98mtjnKCw';
     mapRef.current = new mapboxgl.Map({
@@ -245,6 +275,7 @@ function DialectMap() {
     mapRef.current.on('style.load', () => {
       mapRef.current.setFog({ color: 'rgba(10,8,18,0.9)', 'high-color': '#1a1030', 'horizon-blend': 0.06 });
 
+      // ── Country boundary layer (from Mapbox's built-in tileset) ──
       mapRef.current.addSource('countries', {
         type: 'vector',
         url: 'mapbox://mapbox.country-boundaries-v1',
@@ -256,7 +287,7 @@ function DialectMap() {
         type: 'fill',
         source: 'countries',
         'source-layer': 'country_boundaries',
-        filter: ['==', ['get', 'worldview'], 'all'],
+        filter: ['in', ['get', 'worldview'], ['literal', ['all', 'IN', 'CN', 'US', 'AR', 'MA', 'RU', 'TR', 'JP']]],
         paint: {
           'fill-color': [
             'case',
@@ -342,10 +373,136 @@ function DialectMap() {
           speed: 0.75,
         });
       });
+
+      // ── Recording pins with Mapbox built-in clustering ──
+      // Starts with whatever recordings are already loaded; updated via setData() if
+      // the Supabase fetch finishes after style.load fires.
+      mapRef.current.addSource('recordings', {
+        type: 'geojson',
+        data: recordingsToGeoJSON(recordingsRef.current),
+        cluster: true,
+        clusterMaxZoom: 9,   // stop clustering above zoom 9
+        clusterRadius: 50,   // px radius to merge into one cluster
+      });
+
+      // Cluster bubble
+      mapRef.current.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'recordings',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': [
+            'step', ['get', 'point_count'],
+            '#a78bfa', 5,   // < 5 recordings → light purple
+            '#7c3aed', 20,  // 5–19 → purple
+            '#5b21b6',      // 20+ → deep purple
+          ],
+          'circle-radius': ['step', ['get', 'point_count'], 16, 5, 22, 20, 30],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': 'rgba(255,255,255,0.5)',
+          'circle-opacity': 0.88,
+        },
+      });
+
+      // Count label on cluster
+      mapRef.current.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'recordings',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 12,
+        },
+        paint: { 'text-color': '#fff' },
+      });
+
+      // Individual pin — red for last-speaker languages, purple otherwise
+      mapRef.current.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'recordings',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': [
+            'case',
+            ['==', ['get', 'last_speaker_flag'], true], '#ef4444',
+            '#a78bfa',
+          ],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 5, 10, 9],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.75, 8, 1],
+        },
+      });
+
+      // Click cluster → zoom to expand it
+      mapRef.current.on('click', 'clusters', (e) => {
+        const [feat] = mapRef.current.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+        if (!feat) return;
+        mapRef.current.getSource('recordings').getClusterExpansionZoom(
+          feat.properties.cluster_id,
+          (err, zoom) => {
+            if (err) return;
+            mapRef.current.easeTo({ center: feat.geometry.coordinates, zoom: zoom + 0.5 });
+          }
+        );
+      });
+
+      mapRef.current.on('mouseenter', 'clusters', () => {
+        mapRef.current.getCanvas().style.cursor = 'pointer';
+      });
+      mapRef.current.on('mouseleave', 'clusters', () => {
+        mapRef.current.getCanvas().style.cursor = '';
+      });
+
+      // Click individual pin → popup with playable audio
+      mapRef.current.on('click', 'unclustered-point', (e) => {
+        const props = e.features[0].properties;
+        const coords = e.features[0].geometry.coordinates.slice();
+
+        if (popupRef.current) popupRef.current.remove();
+
+        const location = [props.town, props.region, props.country_name].filter(Boolean).join(', ');
+        const urgency = props.last_speaker_flag
+          ? '<span style="background:#ef4444;color:#fff;padding:1px 7px;border-radius:10px;font-size:10px;vertical-align:middle;margin-left:6px;">last speakers</span>'
+          : '';
+        const ageLabel = props.speaker_age_range
+          ? `<div style="font-size:10px;color:#6b6b80;margin-top:2px;">Speaker age: ${props.speaker_age_range}</div>`
+          : '';
+        const audio = props.audio_url
+          ? `<audio controls src="${props.audio_url}" style="width:100%;height:30px;margin-top:10px;accent-color:#7c3aed;"></audio>`
+          : '';
+
+        popupRef.current = new mapboxgl.Popup({ offset: 14, maxWidth: '290px' })
+          .setLngLat(coords)
+          .setHTML(`
+            <div style="padding:2px;">
+              <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:4px;">
+                ${props.language_name}${urgency}
+              </div>
+              <div style="font-size:10px;color:#9090a8;margin-bottom:6px;">📍 ${location}</div>
+              ${ageLabel}
+              <div style="font-size:11px;color:#e0ddf0;line-height:1.65;margin-top:6px;">${props.description}</div>
+              ${audio}
+            </div>
+          `)
+          .addTo(mapRef.current);
+      });
+
+      mapRef.current.on('mouseenter', 'unclustered-point', () => {
+        mapRef.current.getCanvas().style.cursor = 'pointer';
+      });
+      mapRef.current.on('mouseleave', 'unclustered-point', () => {
+        mapRef.current.getCanvas().style.cursor = '';
+      });
     });
 
     return () => {
       window.speechSynthesis?.cancel();
+      if (popupRef.current) popupRef.current.remove();
       mapRef.current?.remove();
     };
   }, []);

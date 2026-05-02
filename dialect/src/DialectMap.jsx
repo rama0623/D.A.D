@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { supabase } from './supabaseClient';
 
 const COUNTRY_NAME_MAP = {
   'United States of America': 'United States',
@@ -216,6 +217,101 @@ function recordingsToGeoJSON(recordings) {
   };
 }
 
+function ReferenceSection({ recordings }) {
+  if (!recordings || recordings.length === 0) return null;
+  return (
+    <div style={{ marginTop: '20px' }}>
+      <div style={{ borderTop: '1px solid rgba(124,58,237,0.18)', margin: '18px 0' }} />
+      <div style={{ fontSize: '9.5px', color: '#7a7a8c', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: '12px' }}>
+        Reference Archive ({recordings.length})
+      </div>
+      {recordings.map(r => (
+        <div key={r.id} style={{
+          background: 'rgba(60,20,120,0.12)',
+          border: '1px solid rgba(124,58,237,0.18)',
+          borderRadius: '10px',
+          padding: '13px',
+          marginBottom: '10px',
+        }}>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: '13px', color: '#c4b5fd', marginBottom: '3px' }}>
+            {r.accent_name}
+          </div>
+          <div style={{ fontSize: '9.5px', color: '#7a7a8c', marginBottom: '6px' }}>
+            {[r.urban_rural, r.proficiency_level, r.speaker_age_range].filter(Boolean).join(' · ')}
+          </div>
+          {r.additional_notes && (
+            <p style={{ fontSize: '10.5px', color: '#9090a8', lineHeight: '1.6', marginBottom: '8px' }}>
+              {r.additional_notes}
+            </p>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '9.5px', color: '#5a5a70', fontFamily: "'Space Mono',monospace" }}>
+              {r.audio_source}
+            </span>
+            {r.direct_audio_url && (
+              <a
+                href={r.direct_audio_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: '10px', color: '#a78bfa',
+                  fontFamily: "'Space Mono',monospace",
+                  textDecoration: 'none',
+                  background: 'rgba(124,58,237,0.18)',
+                  border: '1px solid rgba(124,58,237,0.35)',
+                  padding: '3px 10px', borderRadius: '6px',
+                }}
+              >
+                Listen ↗
+              </a>
+            )}
+          </div>
+          {r.license && (
+            <div style={{ fontSize: '8.5px', color: '#4a4a5a', marginTop: '6px' }}>{r.license}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CommunitySection({ uploads }) {
+  if (!uploads || uploads.length === 0) return null;
+  return (
+    <div style={{ marginTop: '20px' }}>
+      <div style={{ borderTop: '1px solid rgba(124,58,237,0.18)', margin: '18px 0' }} />
+      <div style={{ fontSize: '9.5px', color: '#7a7a8c', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: '12px' }}>
+        Community Recordings ({uploads.length})
+      </div>
+      {uploads.map(u => (
+        <div key={u.id} style={{
+          background: 'rgba(124,58,237,0.08)',
+          border: '1px solid rgba(124,58,237,0.22)',
+          borderRadius: '10px',
+          padding: '13px',
+          marginBottom: '10px',
+        }}>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: '14px', color: '#c4b5fd', marginBottom: '3px' }}>
+            {u.language_name}
+          </div>
+          <div style={{ fontSize: '9.5px', color: '#7a7a8c', marginBottom: '8px' }}>
+            {[u.town, u.region, u.country].filter(Boolean).join(' · ')}
+            {u.speaker_age_range && ` · ${u.speaker_age_range}`}
+          </div>
+          {u.description && (
+            <p style={{ fontSize: '11px', color: '#9090a8', lineHeight: '1.65', marginBottom: '8px' }}>
+              {u.description}
+            </p>
+          )}
+          {u.audio_url && (
+            <audio controls src={u.audio_url} style={{ width: '100%', height: '30px' }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DialectMap() {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -223,12 +319,80 @@ function DialectMap() {
   const selectedIdRef = useRef(null);
   const recordingsRef = useRef([]);
   const popupRef = useRef(null);
+  const markersRef = useRef([]);
+  const mapReadyRef = useRef(false);
 
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [communityUploads, setCommunityUploads] = useState([]);
+  const [dialectRecordings, setDialectRecordings] = useState([]);
+
+  // CSV country names differ from DIALECT_DATA keys — normalise them
+  const CSV_COUNTRY_MAP = {
+    'USA': 'United States', 'UK': 'United Kingdom',
+    'South Korea': 'South Korea', 'Saudi Arabia': 'Saudi Arabia',
+  };
+  const normCountry = (c) => CSV_COUNTRY_MAP[c] || c;
 
   const dialectInfo = selectedCountry ? (DIALECT_DATA[selectedCountry] ?? null) : null;
+  const communityForCountry = selectedCountry
+    ? communityUploads.filter(u => u.country?.toLowerCase() === selectedCountry.toLowerCase())
+    : [];
+  const referenceForCountry = selectedCountry
+    ? dialectRecordings.filter(r => normCountry(r.country)?.toLowerCase() === selectedCountry.toLowerCase())
+    : [];
+
+  // Fetch community uploads once on mount
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('community_uploads').select('*').then(({ data }) => {
+      if (data) setCommunityUploads(data);
+    });
+  }, []);
+
+  // Fetch reference recordings (from CSV seed) once on mount
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('dialect_recordings').select('*').then(({ data }) => {
+      if (data) setDialectRecordings(data);
+    });
+  }, []);
+
+  // Re-render map markers whenever uploads or map-ready state changes
+  useEffect(() => {
+    if (!mapReadyRef.current || !mapRef.current) return;
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+    communityUploads.forEach(upload => {
+      if (upload.latitude == null || upload.longitude == null) return;
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width:13px;height:13px;border-radius:50%;
+        background:radial-gradient(circle,#a78bfa,#7c3aed);
+        border:2px solid rgba(255,255,255,0.25);
+        cursor:pointer;box-shadow:0 0 8px rgba(124,58,237,0.7);
+        transition:transform 0.15s;
+      `;
+      el.onmouseenter = () => { el.style.transform = 'scale(1.4)'; };
+      el.onmouseleave = () => { el.style.transform = ''; };
+      const popup = new mapboxgl.Popup({ offset: 12, closeButton: false, maxWidth: '220px' })
+        .setHTML(`
+          <div style="font-family:'Space Mono',monospace;background:#0f0a1e;color:#f0eee8;padding:10px 12px;border-radius:8px;border:1px solid rgba(124,58,237,0.3)">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#a78bfa;margin-bottom:4px">${upload.language_name}</div>
+            <div style="font-size:9.5px;color:#7a7a8c;margin-bottom:6px">${[upload.town, upload.region, upload.country].filter(Boolean).join(' · ')}</div>
+            ${upload.description ? `<div style="font-size:10.5px;color:#9090a8;line-height:1.6;margin-bottom:8px">${upload.description}</div>` : ''}
+            ${upload.audio_url ? `<audio controls src="${upload.audio_url}" style="width:100%;height:28px"></audio>` : ''}
+          </div>
+        `);
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([upload.longitude, upload.latitude])
+        .setPopup(popup)
+        .addTo(mapRef.current);
+      markersRef.current.push(marker);
+    });
+  }, [communityUploads]);
+
   const currentEra = dialectInfo?.timeline[timelineIndex] ?? null;
   const totalEras = dialectInfo?.timeline.length ?? 0;
 
@@ -273,6 +437,9 @@ function DialectMap() {
     mapRef.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     mapRef.current.on('style.load', () => {
+      mapReadyRef.current = true;
+      // Re-trigger marker placement now that the map is ready
+      setCommunityUploads(prev => [...prev]);
       mapRef.current.setFog({ color: 'rgba(10,8,18,0.9)', 'high-color': '#1a1030', 'horizon-blend': 0.06 });
 
       // ── Country boundary layer (from Mapbox's built-in tileset) ──
@@ -522,7 +689,7 @@ function DialectMap() {
 
   const s = {
     panel: {
-      position: 'fixed', top: 0, right: 0, width: '370px', height: '100vh',
+      position: 'fixed', top: '48px', right: 0, width: '370px', height: 'calc(100vh - 48px)',
       background: 'linear-gradient(180deg,#0f0a1e 0%,#130d24 60%,#0f0a1e 100%)',
       borderLeft: '1px solid rgba(124,58,237,0.28)',
       overflowY: 'auto', padding: '22px 20px 28px', color: '#f0eee8',
@@ -542,9 +709,9 @@ function DialectMap() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <style>{PANEL_CSS}</style>
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100vh' }} />
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
       {!selectedCountry && (
         <div className="hint-pill">Click any country to explore its dialects &amp; accent history</div>
@@ -663,6 +830,12 @@ function DialectMap() {
                 <button className="era-nav-btn" onClick={() => goEra(-1)} disabled={timelineIndex === 0}>← Prev Era</button>
                 <button className="era-nav-btn" onClick={() => goEra(1)} disabled={timelineIndex === totalEras - 1}>Next Era →</button>
               </div>
+
+              {/* ── Reference Archive (from CSV database) ── */}
+              <ReferenceSection recordings={referenceForCountry} />
+
+              {/* ── Community Recordings ── */}
+              <CommunitySection uploads={communityForCountry} />
             </>
           ) : (
             /* ── No data fallback ── */
@@ -678,6 +851,8 @@ function DialectMap() {
                   Try: USA · UK · France · Germany · Spain · India · Australia · Brazil · Japan · Nigeria · Russia · China
                 </p>
               </div>
+              <ReferenceSection recordings={referenceForCountry} />
+              <CommunitySection uploads={communityForCountry} />
             </div>
           )}
         </div>

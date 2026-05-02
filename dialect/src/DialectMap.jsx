@@ -2,8 +2,6 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2RyNjY0IiwiYSI6ImNtbTNnemljNjAwb3cycXF5Y2VuZGNoamwifQ.OcRTxaB1n23tj98mtjnKCw';
-
 const COUNTRY_NAME_MAP = {
   'United States of America': 'United States',
   'United Kingdom of Great Britain and Northern Ireland': 'United Kingdom',
@@ -234,7 +232,7 @@ function DialectMap() {
   }, [clearSpeech]);
 
   useEffect(() => {
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    mapboxgl.accessToken = import.meta.env.VITE_MAP_BOX;
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',

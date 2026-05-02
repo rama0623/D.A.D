@@ -232,7 +232,7 @@ function DialectMap() {
   }, [clearSpeech]);
 
   useEffect(() => {
-    mapboxgl.accessToken = import.meta.env.VITE_MAP_BOX;
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZ2RyNjY0IiwiYSI6ImNtbTNnemljNjAwb3cycXF5Y2VuZGNoamwifQ.OcRTxaB1n23tj98mtjnKCw';
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',

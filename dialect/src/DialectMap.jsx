@@ -53,11 +53,13 @@ const SAMPLE_RECORDINGS = [
   { id: 18, language: 'Okinawan',          location: 'Naha, Japan',               lat: 26.2124,  lng: 127.6809, endangerment: 'critically_endangered' },
   // Europe
   { id: 19, language: 'Scottish Gaelic',   location: 'Inverness, Scotland',       lat: 57.4778,  lng: -4.2247,  endangerment: 'severely_endangered' },
-  { id: 20, language: 'Welsh',             location: 'Bangor, Wales',             lat: 53.2274,  lng: -4.1293,  endangerment: 'vulnerable' },
+  { id: 20, language: 'Welsh',             location: 'Bangor, Wales',             lat: 53.2274,  lng: -4.1293,  endangerment: 'vulnerable',           hf_audio_src: '/audio/welsh.mp3', recorded_on: '3 May 2026' },
+  { id: 36, language: 'Irish (Gaeilge)',   location: 'Connemara, Ireland',        lat: 53.4964,  lng: -9.9261,  endangerment: 'definitely_endangered', hf_audio_src: '/audio/irish.mp3', recorded_on: '3 May 2026' },
   { id: 21, language: 'Cornish',           location: 'Penzance, England',         lat: 50.1187,  lng: -5.5374,  endangerment: 'extinct' },
   { id: 22, language: 'Basque',            location: 'San Sebastián, Spain',      lat: 43.3183,  lng: -1.9812,  endangerment: 'vulnerable' },
   { id: 23, language: 'Sicilian',          location: 'Palermo, Italy',            lat: 38.1157,  lng: 13.3615,  endangerment: 'definitely_endangered' },
-  { id: 24, language: 'Geordie',           location: 'Newcastle, England',        lat: 54.9783,  lng: -1.6178,  endangerment: 'safe' },
+  { id: 24, language: 'Geordie',           location: 'Newcastle, England',        lat: 54.9783,  lng: -1.6178,  endangerment: 'safe',                  hf_audio_src: '/audio/geordie.mp3', recorded_on: '3 May 2026' },
+  { id: 37, language: 'Catalan',           location: 'Barcelona, Spain',          lat: 41.3851,  lng: 2.1734,   endangerment: 'vulnerable',            hf_audio_src: '/audio/catalan.mp3', recorded_on: '3 May 2026' },
   // Americas
   { id: 25, language: 'Yucatec Maya',      location: 'Mérida, Mexico',            lat: 20.9674,  lng: -89.5926, endangerment: 'definitely_endangered' },
   { id: 26, language: 'Classical Nahuatl', location: 'Cholula, Mexico',           lat: 19.0634,  lng: -98.3023, endangerment: 'extinct' },
@@ -747,7 +749,7 @@ function Breadcrumb({ crumbs }) {
   );
 }
 
-function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
+function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho, onLocationPick }) {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const hoveredIdRef = useRef(null);
@@ -757,12 +759,15 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
   const mapReadyRef = useRef(false);
   const hfDataRef = useRef(null);       // HF samples once fetched
   const sourceReadyRef = useRef(false); // true after recordings source is added to map
+  const communityUploadsRef = useRef([]);
+  const hintTimerRef = useRef(null);
 
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [communityUploads, setCommunityUploads] = useState([]);
   const [dialectRecordings, setDialectRecordings] = useState([]);
   const [hfCount, setHfCount] = useState(0);
+  const [locHint, setLocHint] = useState(null);
 
   // CSV country names differ from DIALECT_DATA keys — normalise them
   const CSV_COUNTRY_MAP = {
@@ -786,6 +791,9 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
       if (data) setCommunityUploads(data);
     });
   }, []);
+
+  // Keep ref in sync so the map click handler ([] deps) always reads current uploads
+  useEffect(() => { communityUploadsRef.current = communityUploads; }, [communityUploads]);
 
   // Fetch reference recordings (from CSV seed) once on mount
   useEffect(() => {
@@ -817,18 +825,18 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
     if (!mapReadyRef.current || !mapRef.current) return;
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
+    const pinnedLanguages = new Set(SAMPLE_RECORDINGS.map(r => r.language.toLowerCase().trim()));
     communityUploads.forEach(upload => {
       if (upload.latitude == null || upload.longitude == null) return;
+      // Skip dot if a recording pin already covers this language — its popup shows contributions
+      if (pinnedLanguages.has((upload.language_name ?? '').toLowerCase().trim())) return;
       const el = document.createElement('div');
       el.style.cssText = `
         width:13px;height:13px;border-radius:50%;
         background:radial-gradient(circle,#a78bfa,#7c3aed);
         border:2px solid rgba(255,255,255,0.25);
         cursor:pointer;box-shadow:0 0 8px rgba(124,58,237,0.7);
-        transition:transform 0.15s;
       `;
-      el.onmouseenter = () => { el.style.transform = 'scale(1.4)'; };
-      el.onmouseleave = () => { el.style.transform = ''; };
       const popup = new mapboxgl.Popup({ offset: 12, closeButton: false, maxWidth: '220px' })
         .setHTML(`
           <div style="font-family:'Space Mono',monospace;background:#0f0a1e;color:#f0eee8;padding:10px 12px;border-radius:8px;border:1px solid rgba(124,58,237,0.3)">
@@ -864,8 +872,40 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
         window._currentAudio.pause();
         window._currentAudio.currentTime = 0;
       }
+      if (window._audioTsTimer) {
+        clearInterval(window._audioTsTimer);
+        window._audioTsTimer = null;
+      }
       const audio = new Audio(src);
       window._currentAudio = audio;
+
+      const fmt = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+      };
+      const tick = () => {
+        const el = document.getElementById('audio-ts');
+        if (!el) return;
+        const dur = isFinite(audio.duration) ? fmt(audio.duration) : '--:--';
+        el.textContent = `⏱ ${fmt(audio.currentTime)} / ${dur}`;
+        el.style.color = '#c4b5fd';
+        el.style.borderColor = 'rgba(124,58,237,0.45)';
+        el.style.background = 'rgba(124,58,237,0.13)';
+      };
+      audio.addEventListener('loadedmetadata', tick);
+      window._audioTsTimer = setInterval(tick, 250);
+      audio.addEventListener('ended', () => {
+        clearInterval(window._audioTsTimer);
+        window._audioTsTimer = null;
+        const el = document.getElementById('audio-ts');
+        if (el) {
+          el.textContent = '⏱ done';
+          el.style.color = '#6ee7b7';
+          el.style.borderColor = 'rgba(52,211,153,0.35)';
+          el.style.background = 'rgba(52,211,153,0.07)';
+        }
+      });
       audio.play().catch(() => {});
     };
 
@@ -1130,8 +1170,15 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
                 cursor:pointer;letter-spacing:0.5px;">
               ▶ Hear sample
             </button>
+            <div id="audio-ts" style="margin-top:6px;padding:4px 0;
+              font-family:'Space Mono',monospace;font-size:8px;letter-spacing:0.6px;
+              text-align:center;color:#5a5a70;
+              background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18);
+              border-radius:6px;">
+              ⏱ 0:00 / --:--
+            </div>
             ${transcript}
-            <div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🤗 real recording · CC BY-SA 4.0</div>
+            ${props.recorded_on ? `<div style="margin-top:4px;font-size:8px;color:#7a7a8c;">🕐 Recorded ${props.recorded_on}</div>` : '<div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🤗 real recording · CC BY-SA 4.0</div>'}
             <button onclick="window._openEcho('${safeLangName}','${safeLocation}','${safeSrc}','${safeText}')"
               style="margin-top:8px;width:100%;background:rgba(52,211,153,0.08);
                 border:1px solid rgba(52,211,153,0.28);color:#6ee7b7;border-radius:7px;
@@ -1140,28 +1187,63 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
               ◉ Echo this voice
             </button>`;
         } else {
-          // ── Placeholder pin — no audio yet ──
+          // ── Placeholder pin — check for local contributions ──
           const desc = props.description
             ? `<p style="font-size:10.5px;color:#9090a8;line-height:1.7;margin:10px 0 0;">${props.description}</p>`
             : '';
 
+          const langKey = (props.language ?? '').toLowerCase().trim();
+          const contributions = communityUploadsRef.current.filter(
+            u => (u.language_name ?? '').toLowerCase().trim() === langKey
+          );
+
+          let contributionsSection = '';
+          if (contributions.length > 0) {
+            const items = contributions.map(u => {
+              const loc = [u.town, u.region, u.country].filter(Boolean).join(' · ');
+              const contribDesc = u.description
+                ? `<div style="font-size:9.5px;color:#9090a8;line-height:1.5;margin:4px 0 5px;">${u.description}</div>`
+                : '';
+              const player = u.audio_url
+                ? `<audio controls src="${u.audio_url}" style="width:100%;height:26px;margin-top:2px;"></audio>`
+                : '';
+              return `
+                <div style="margin-bottom:7px;padding:8px;border-radius:6px;
+                  background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18);">
+                  <div style="font-size:9px;color:#7a7a8c;">📍 ${loc}</div>
+                  ${contribDesc}${player}
+                </div>`;
+            }).join('');
+
+            contributionsSection = `
+              <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(124,58,237,0.2);">
+                <div style="font-size:9px;color:#a78bfa;letter-spacing:0.5px;
+                  font-family:'Space Mono',monospace;margin-bottom:6px;">
+                  ◉ LOCAL CONTRIBUTIONS (${contributions.length})
+                </div>
+                ${items}
+              </div>`;
+          }
+
+          const hasContribs = contributions.length > 0;
           const preserveBtn = isEndangered
             ? `<button onclick="window._startProtocol('${safeLangName}')"
                 style="margin-top:10px;width:100%;background:rgba(196,181,253,0.12);
                   border:1px solid rgba(196,181,253,0.4);color:#e2d9ff;border-radius:7px;
                   padding:8px 0;font-family:'Space Mono',monospace;font-size:10px;
                   cursor:pointer;letter-spacing:0.5px;">
-                ◉ Preserve this language
+                ${hasContribs ? '+ Add another recording' : '◉ Preserve this language'}
               </button>`
-            : `<div onclick="window._goUpload()" style="margin-top:12px;padding:10px 12px;border-radius:8px;
+            : `<div onclick="window._goUpload()" style="margin-top:10px;padding:10px 12px;border-radius:8px;
                 background:rgba(124,58,237,0.07);border:1px dashed rgba(124,58,237,0.28);text-align:center;cursor:pointer;"
                 onmouseover="this.style.background='rgba(124,58,237,0.14)'"
                 onmouseout="this.style.background='rgba(124,58,237,0.07)'">
-                <div style="font-size:9.5px;color:#5a5a70;margin-bottom:4px;">No recordings in our archive yet.</div>
-                <div style="font-size:10px;color:#a78bfa;">Be the first to contribute one ↗</div>
+                <div style="font-size:10px;color:#a78bfa;">
+                  ${hasContribs ? '+ Add another recording ↗' : 'Be the first to contribute one ↗'}
+                </div>
               </div>`;
 
-          body = `${desc}${preserveBtn}`;
+          body = `${desc}${contributionsSection}${preserveBtn}`;
         }
 
         if (popupRef.current) popupRef.current.remove();
@@ -1169,6 +1251,18 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
           .setLngLat(coords)
           .setHTML(`<div style="padding:2px;">${header}${body}</div>`)
           .addTo(mapRef.current);
+
+        popupRef.current.on('close', () => {
+          if (window._currentAudio) {
+            window._currentAudio.pause();
+            window._currentAudio.currentTime = 0;
+            window._currentAudio = null;
+          }
+          if (window._audioTsTimer) {
+            clearInterval(window._audioTsTimer);
+            window._audioTsTimer = null;
+          }
+        });
       });
 
       mapRef.current.on('mouseenter', 'recordings-layer', () => {
@@ -1176,6 +1270,31 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
       });
       mapRef.current.on('mouseleave', 'recordings-layer', () => {
         mapRef.current.getCanvas().style.cursor = '';
+      });
+
+      // General map click — reverse-geocode and pre-fill upload form
+      mapRef.current.on('click', async (e) => {
+        const hit = mapRef.current.queryRenderedFeatures(e.point, { layers: ['recordings-layer'] });
+        if (hit.length > 0) return; // pin click already handled above
+        const { lng, lat } = e.lngLat;
+        try {
+          const res  = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng.toFixed(5)},${lat.toFixed(5)}.json` +
+            `?access_token=${mapboxgl.accessToken}&types=country,region,place&limit=1`
+          );
+          const json = await res.json();
+          const feat = json.features?.[0];
+          if (!feat) return;
+          const ctx     = feat.context ?? [];
+          const town    = feat.place_type?.[0] === 'place'   ? feat.text : (ctx.find(c => c.id.startsWith('place.'))?.text   ?? '');
+          const region  = feat.place_type?.[0] === 'region'  ? feat.text : (ctx.find(c => c.id.startsWith('region.'))?.text  ?? '');
+          const country = feat.place_type?.[0] === 'country' ? feat.text : (ctx.find(c => c.id.startsWith('country.'))?.text ?? '');
+          const display = [town, region, country].filter(Boolean).join(', ');
+          setLocHint(display);
+          clearTimeout(hintTimerRef.current);
+          hintTimerRef.current = setTimeout(() => setLocHint(null), 4000);
+          if (onLocationPick) onLocationPick({ town, region, country });
+        } catch (_) {}
       });
     });
 
@@ -1242,6 +1361,22 @@ function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
 
       {!selectedCountry && (
         <div className="hint-pill">Click any country · Click a pulse to identify a dialect</div>
+      )}
+
+      {/* Location-picked banner */}
+      {locHint && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(12,8,24,0.93)', border: '1px solid rgba(124,58,237,0.45)',
+          borderRadius: 10, padding: '8px 18px',
+          fontFamily: "'Space Mono',monospace", fontSize: 11, color: '#c4b5fd',
+          backdropFilter: 'blur(10px)', zIndex: 100, pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap',
+        }}>
+          <span>📍</span>
+          <span>{locHint}</span>
+          <span style={{ color: '#5a5a70', fontSize: 9 }}>· ready to fill in Upload</span>
+        </div>
       )}
 
       {/* Voice counter */}

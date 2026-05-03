@@ -34,7 +34,8 @@ function TabBtn({ label, active, onClick }) {
 function App() {
   const [tab, setTab] = useState('globe')
   const [protocolLang, setProtocolLang] = useState('')
-  const [echoData, setEchoData] = useState(null) // { language, location, audioSrc, text }
+  const [echoData, setEchoData] = useState(null)
+  const [pickedLocation, setPickedLocation] = useState(null)
 
   const handleStartProtocol = (lang) => {
     setProtocolLang(lang)
@@ -85,13 +86,14 @@ function App() {
             onStartProtocol={handleStartProtocol}
             onGoUpload={() => setTab('upload')}
             onOpenEcho={setEchoData}
+            onLocationPick={setPickedLocation}
           />
         </div>
 
         {/* Upload — mounted only when active, scrollable overlay */}
         {tab === 'upload' && (
           <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', zIndex: 100 }}>
-            <UploadTab />
+            <UploadTab initialLocation={pickedLocation} />
           </div>
         )}
 

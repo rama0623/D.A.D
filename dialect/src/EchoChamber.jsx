@@ -53,6 +53,80 @@ function pearson(a, b) {
   return cov / (Math.sqrt(va * vb) + 1e-9);
 }
 
+const PRONUNCIATION_GUIDES = {
+  'Welsh': {
+    overview: "Stress almost always falls on the second-to-last syllable. Welsh vowels are pure — no gliding.",
+    sounds: [
+      { pattern: 'll',      guide: "No English match. Tongue on roof of mouth, blow air out the sides — a hissing lateral." },
+      { pattern: 'ch',      guide: "Like Scottish 'loch' — deep in the throat, never 'ch' as in 'church'." },
+      { pattern: 'dd',      guide: "Voiced 'th' as in 'the', never a 'd' sound." },
+      { pattern: 'f',       guide: "Sounds like 'v' — 'fach' is pronounced 'vach'." },
+      { pattern: 'ff',      guide: "Standard 'f' sound — 'ffwl' sounds like 'fool'." },
+      { pattern: 'rh',      guide: "Breathed rolled 'r' — whisper while trilling the tip of your tongue." },
+      { pattern: 'w / y',   guide: "Both act as vowels. 'w' = 'oo', 'y' = 'uh' (unstressed) or 'ee' (stressed)." },
+    ],
+  },
+  'Irish (Gaeilge)': {
+    overview: "Stress lands on the first syllable in most dialects. Consonants come in broad (next to a/o/u) and slender (next to e/i) forms — this changes their sound.",
+    sounds: [
+      { pattern: 'bh / mh', guide: "'v' or 'w' sound — 'bhfuil' sounds like 'will'." },
+      { pattern: 'th / sh', guide: "Both reduce to a plain 'h' — the 't' and 's' are silent." },
+      { pattern: 'ph',      guide: "'f' sound — lenition turns 'p' into 'f'." },
+      { pattern: 'fh',      guide: "Completely silent — 'fhear' sounds like 'ar'." },
+      { pattern: 'ao',      guide: "Long 'ee' with relaxed lips — halfway between 'ee' and 'uh'." },
+      { pattern: 'broad r', guide: "Strong back-of-tongue trill, like a rolled 'r' with more friction." },
+    ],
+  },
+  'Geordie': {
+    overview: "Geordie rhythm is punchy and musical. Vowels shift significantly from standard English — don't fight them, lean in.",
+    sounds: [
+      { pattern: 'a (face, name)', guide: "Flat 'a' as in 'cat' — 'face' sounds closer to 'fass'." },
+      { pattern: 'ow (town, down)', guide: "'oon' sound — 'town' becomes 'toon', 'brown' becomes 'broon'." },
+      { pattern: 'oo (book, cook)', guide: "Fully rounded — 'book' sounds like 'byeuk'." },
+      { pattern: '-ing endings',   guide: "Drop the 'g' — 'running' is 'runnin'', 'going' is 'gannin''." },
+      { pattern: 'wh-',            guide: "Breathe the 'h' — 'where' sounds like 'hwor'." },
+    ],
+  },
+  'Catalan': {
+    overview: "Stress usually falls on the last or second-to-last syllable. Unstressed vowels reduce heavily — this is the biggest challenge for learners.",
+    sounds: [
+      { pattern: 'l·l',          guide: "Geminate — hold the 'l' a full beat longer than a single 'l'." },
+      { pattern: 'ny',           guide: "Like Spanish 'ñ' or French 'gn' — 'Catalunya' contains this sound." },
+      { pattern: 'ig (word end)', guide: "'tch' sound — 'mig' (middle) sounds like 'mitch'." },
+      { pattern: 'unstressed a/e', guide: "Both become a schwa 'uh' — very reduced, almost swallowed." },
+      { pattern: 'v',            guide: "Pronounced 'b' in most dialects — 'vi' (wine) sounds like 'bi'." },
+      { pattern: 'x',            guide: "'sh' sound — 'caixa' (box) sounds like 'KAY-sha'." },
+    ],
+  },
+  'Scottish Gaelic': {
+    overview: "Stress falls on the first syllable. Gaelic has many sounds absent from English — listen for the breathy quality on aspirated consonants.",
+    sounds: [
+      { pattern: 'bh / mh', guide: "'v' sound at start of words, 'w' in the middle." },
+      { pattern: 'ch',       guide: "Velar fricative — like 'loch'. Two types: back (broad) and front (slender, like 'hue')." },
+      { pattern: 'dh / gh',  guide: "Broad: back-throat 'g' with no full stop. Slender: like 'y' in 'yes'." },
+      { pattern: 'ao',       guide: "Long vowel with no English equivalent — round your lips and say 'ee'." },
+      { pattern: 'final -adh', guide: "Sounds like 'ugh' — the 'd' is not heard." },
+    ],
+  },
+  'Welsh English': {
+    overview: "Welsh English carries the melody of Welsh — sentences often rise and fall in a sing-song pattern. Vowels are longer and purer than standard English.",
+    sounds: [
+      { pattern: 'sing-song intonation', guide: "Sentences end on a higher pitch — let the melody lift at the end." },
+      { pattern: 'r',                    guide: "Always pronounced (rhotic) — never dropped as in standard British English." },
+      { pattern: 'pure vowels',          guide: "No diphthong glide — 'say' is a steady 'seh', not 'seh-ee'." },
+    ],
+  },
+  'Irish English': {
+    overview: "Irish English has a clear, musical rhythm. Vowels differ markedly from British English and the 'th' sounds are often replaced.",
+    sounds: [
+      { pattern: 'th → t / d', guide: "'Three' sounds like 'tree', 'the' sounds like 'de' in many speakers." },
+      { pattern: 'i (bit, sit)', guide: "Often raised — sounds closer to 'beet' than standard 'bit'." },
+      { pattern: 'past tense', guide: "Often uses 'after' construction — 'I'm after eating' = 'I just ate'." },
+      { pattern: 'final -ing', guide: "Pronounced fully — no 'runnin'' dropping; 'running' keeps its 'g'." },
+    ],
+  },
+};
+
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
   @keyframes echoIn   { from { opacity:0; transform:translateY(16px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -68,11 +142,11 @@ const CSS = `
 `;
 
 export default function EchoChamber({ language, location, audioSrc, text, onClose }) {
-  const [phase, setPhase]       = useState('idle'); // idle|playing|countdown|recording|done
+  const [phase, setPhase]         = useState('idle'); // idle|playing|countdown|recording|done
   const [countdown, setCountdown] = useState(3);
-  const [score, setScore]       = useState(null);
-  const [attempts, setAttempts] = useState(0);
-  const [nativeReady, setNativeReady] = useState(false);
+  const [score, setScore]         = useState(null);
+  const [attempts, setAttempts]   = useState(0);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   const nativeRef    = useRef(null);
   const userRef      = useRef(null);
@@ -81,6 +155,7 @@ export default function EchoChamber({ language, location, audioSrc, text, onClos
   const mrRef        = useRef(null);
   const chunksRef    = useRef([]);
   const ivRef        = useRef(null);
+  const playbackRef  = useRef(null);
 
   // Decode native audio and draw waveform
   useEffect(() => {
@@ -96,9 +171,8 @@ export default function EchoChamber({ language, location, audioSrc, text, onClos
         const env = computeEnvelope(decoded);
         nativeEnvRef.current = env;
         drawWave(nativeRef.current, env, '#a78bfa');
-        setNativeReady(true);
       })
-      .catch(() => setNativeReady(true)); // proceed even if waveform fails
+      .catch(() => {}); // proceed even if waveform fails
     return () => {
       clearInterval(ivRef.current);
       ctx?.close().catch(() => {});
@@ -111,10 +185,21 @@ export default function EchoChamber({ language, location, audioSrc, text, onClos
     return audioCtxRef.current;
   };
 
+  const handleClose = () => {
+    if (playbackRef.current) {
+      playbackRef.current.pause();
+      playbackRef.current.currentTime = 0;
+      playbackRef.current = null;
+    }
+    clearInterval(ivRef.current);
+    onClose();
+  };
+
   const play = () => {
     if (phase !== 'idle' && phase !== 'done') return;
     setPhase('playing');
     const audio = new Audio(audioSrc);
+    playbackRef.current = audio;
     audio.play().catch(() => setPhase('idle'));
     audio.onended = () => {
       let c = 3;
@@ -199,7 +284,7 @@ export default function EchoChamber({ language, location, audioSrc, text, onClos
         fontFamily: "'Space Mono',monospace", color: '#f0eee8', position: 'relative',
       }}>
         {/* Close */}
-        <button onClick={onClose} style={{
+        <button onClick={handleClose} style={{
           position: 'absolute', top: 14, right: 16, background: 'none',
           border: 'none', color: '#4a4a5a', fontSize: 22, cursor: 'pointer', lineHeight: 1,
         }}>×</button>
@@ -219,6 +304,53 @@ export default function EchoChamber({ language, location, audioSrc, text, onClos
               background: 'rgba(124,58,237,0.09)', border: '1px solid rgba(124,58,237,0.18)',
               fontSize: 11.5, color: '#9090a8', fontStyle: 'italic', lineHeight: 1.65,
             }}>"{text}"</div>
+          )}
+
+          {/* Pronunciation guide */}
+          {PRONUNCIATION_GUIDES[language] && (
+            <div style={{ marginTop: 13 }}>
+              <button
+                onClick={() => setGuideOpen(o => !o)}
+                style={{
+                  width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '7px 11px', borderRadius: 8,
+                  background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.18)',
+                }}
+              >
+                <span style={{ fontFamily: "'Space Mono',monospace", fontSize: 9, color: '#a78bfa', letterSpacing: '1.2px' }}>
+                  ◈ PRONUNCIATION GUIDE
+                </span>
+                <span style={{ fontSize: 11, color: '#5a5a70' }}>{guideOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {guideOpen && (
+                <div style={{
+                  marginTop: 6, padding: '10px 12px', borderRadius: 8,
+                  background: 'rgba(10,6,20,0.6)', border: '1px solid rgba(124,58,237,0.15)',
+                  maxHeight: 210, overflowY: 'auto',
+                }}>
+                  <p style={{ margin: '0 0 10px', fontSize: 10, color: '#7a7a8c', lineHeight: 1.65 }}>
+                    {PRONUNCIATION_GUIDES[language].overview}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {PRONUNCIATION_GUIDES[language].sounds.map(({ pattern, guide }) => (
+                      <div key={pattern} style={{
+                        display: 'grid', gridTemplateColumns: '90px 1fr', gap: 10,
+                        padding: '6px 8px', borderRadius: 6,
+                        background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.12)',
+                      }}>
+                        <span style={{
+                          fontFamily: "'Space Mono',monospace", fontSize: 10,
+                          color: '#c4b5fd', fontWeight: 700, alignSelf: 'center',
+                        }}>{pattern}</span>
+                        <span style={{ fontSize: 10, color: '#9090a8', lineHeight: 1.55 }}>{guide}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

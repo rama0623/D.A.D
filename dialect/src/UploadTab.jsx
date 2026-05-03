@@ -181,12 +181,32 @@ const s = {
   },
 }
 
-function UploadTab() {
+const COUNTRY_ALIASES = {
+  'england': 'United Kingdom', 'scotland': 'United Kingdom',
+  'wales': 'United Kingdom', 'northern ireland': 'United Kingdom',
+  'great britain': 'United Kingdom', 'britain': 'United Kingdom',
+  'united states of america': 'United States', 'usa': 'United States',
+  'republic of ireland': 'Ireland', 'eire': 'Ireland',
+  'czechia': 'Czech Republic', 'holland': 'Netherlands',
+  'burma': 'Myanmar', 'persia': 'Iran',
+};
+
+function matchCountry(name) {
+  if (!name) return '';
+  const lower = name.toLowerCase().trim();
+  if (COUNTRY_ALIASES[lower]) return COUNTRY_ALIASES[lower];
+  const exact = COUNTRIES.find(c => c.toLowerCase() === lower);
+  if (exact) return exact;
+  const contains = COUNTRIES.find(c => lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower));
+  return contains ?? '';
+}
+
+function UploadTab({ initialLocation }) {
   const [form, setForm] = useState({
     language_name: '',
-    country: '',
-    region: '',
-    town: '',
+    country:  matchCountry(initialLocation?.country) ?? '',
+    region:   initialLocation?.region  ?? '',
+    town:     initialLocation?.town    ?? '',
     speaker_age_range: '',
     speaker_gender: '',
     description: '',
@@ -194,8 +214,19 @@ function UploadTab() {
   })
   const [audioFile, setAudioFile] = useState(null)
   const [dragOver, setDragOver] = useState(false)
-  const [status, setStatus] = useState(null) // null | 'uploading' | 'success' | 'error'
+  const [status, setStatus] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Sync if geocoding finishes after this tab was already open
+  React.useEffect(() => {
+    if (!initialLocation) return
+    setForm(prev => ({
+      ...prev,
+      country: prev.country || matchCountry(initialLocation.country),
+      region:  prev.region  || initialLocation.region  || '',
+      town:    prev.town    || initialLocation.town     || '',
+    }))
+  }, [initialLocation])
 
   const set = (name, value) => setForm(prev => ({ ...prev, [name]: value }))
 
@@ -314,7 +345,14 @@ function UploadTab() {
 
           {/* Country */}
           <div style={s.field}>
-            <label style={s.label}>Country *</label>
+            <label style={s.label}>
+              Country *
+              {initialLocation?.country && (
+                <span style={{ marginLeft: 8, fontSize: 9, color: '#a78bfa', letterSpacing: '0.5px', textTransform: 'none', fontWeight: 400 }}>
+                  📍 pre-filled from globe
+                </span>
+              )}
+            </label>
             <select style={s.select} value={form.country} onChange={e => set('country', e.target.value)}>
               <option value="">Select a country...</option>
               {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}

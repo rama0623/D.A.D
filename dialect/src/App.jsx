@@ -67,7 +67,7 @@ function App() {
           marginRight: '14px',
           userSelect: 'none',
         }}>
-          dialect decoder
+          DAD (Dialect Accent Directory)
         </div>
         <TabBtn label="🌐  Globe" active={tab === 'globe'} onClick={() => setTab('globe')} />
         <TabBtn label="⬆  Upload" active={tab === 'upload'} onClick={() => setTab('upload')} />

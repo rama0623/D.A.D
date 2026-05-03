@@ -552,46 +552,6 @@ function EndangermentMeterWidget() {
   );
 }
 
-// ── TTS config: BCP-47 locale + short native-language sample for each pin ───
-// Indexed by SAMPLE_RECORDINGS id. Falls back gracefully when the OS has no
-// voice for that locale — the browser picks the closest available voice.
-const SAMPLE_TTS = {
-  1:  { lang: 'yo',    text: 'E kaaro. Bawo ni?' },
-  2:  { lang: 'en-NG', text: 'How far na? Wetin dey happen?' },
-  3:  { lang: 'ig',    text: 'Nnọọ, kedu ka ọ dị?' },
-  4:  { lang: 'en-NG', text: 'Mbok, ami doko?' },
-  5:  { lang: 'am',    text: 'Selam, dehna neh?' },
-  6:  { lang: 'ti',    text: 'Selam, kemey alo?' },
-  7:  { lang: 'om',    text: 'Akkam jirta?' },
-  8:  { lang: 'hi-IN', text: 'Yaar, kya scene hai? Ekdum solid plan hai.' },
-  9:  { lang: 'ks',    text: 'Aadaab, kya haal chaal?' },
-  10: { lang: 'ta-IN', text: 'Vanakkam, neenga epdi irukkeenga?' },
-  11: { lang: 'pa-IN', text: 'Sat sri akaal, ki haal hai?' },
-  12: { lang: 'jv',    text: 'Sugeng rawuh, piye kabare?' },
-  13: { lang: 'id',    text: 'Horas, apa kabar?' },
-  14: { lang: 'zh-HK', text: '你好，你今日點呀？' },
-  15: { lang: 'zh-CN', text: '侬好，今朝侬吃过饭了伐？' },
-  16: { lang: 'ja-JP', text: 'おおきに！なんでやねん！' },
-  17: { lang: 'ja-JP', text: 'んだ、そうだべ、んだなぁ。' },
-  18: { lang: 'ja-JP', text: 'はいさい、めんそーれ！' },
-  19: { lang: 'gd',    text: 'Madainn mhath, ciamar a tha thu?' },
-  20: { lang: 'cy',    text: 'Bore da, sut mae?' },
-  21: { lang: 'en-GB', text: 'Meur ras. Yma Kernow bys vyken.' },
-  22: { lang: 'eu',    text: 'Kaixo, zer moduz zaude?' },
-  23: { lang: 'it',    text: 'Ciao, comu siti? Tuttu bonu?' },
-  24: { lang: 'en-GB', text: "Alreet pet, howay man, ye gannin doon toon?" },
-  25: { lang: 'es-MX', text: "Ba'ax ka wa'alik? Bix a beel?" },
-  26: { lang: 'es-MX', text: 'Niltze. Quen tinemi in tonaltzin?' },
-  27: { lang: 'pt-BR', text: 'Oi mano, tudo bem? Saudade demais.' },
-  28: { lang: 'pt-BR', text: 'Oxente, meu fio! Tá doido, não?' },
-  29: { lang: 'es-CO', text: '¿Qué más, parce? Todo bien por acá.' },
-  30: { lang: 'tpi',   text: 'Apinun tru, ol manmeri.' },
-  31: { lang: 'ho',    text: 'Dahaka, o hairava.' },
-  32: { lang: 'ar-EG', text: 'أهلاً وسهلاً، إزيك النهارده؟' },
-  33: { lang: 'ar-EG', text: 'إيه أخبارك يا صعيدي؟' },
-  34: { lang: 'tt',    text: 'Исәнмесез, хәлегез ничек?' },
-  35: { lang: 'ru-RU', text: 'Привет, братан! Всё норм?' },
-};
 
 // ── HuggingFace: ylacombe/english_dialects ──────────────────────────────────
 // 6 British-Isles dialect regions, 17,877 samples, CC BY-SA 4.0
@@ -639,7 +599,6 @@ async function fetchHFDialects() {
 }
 
 function toGeoJSONFeature(rec) {
-  const tts = SAMPLE_TTS[rec.id] ?? null;
   return {
     type: 'Feature',
     properties: {
@@ -651,8 +610,6 @@ function toGeoJSONFeature(rec) {
       hf_text:      rec.hf_text      ?? '',
       hf_audio_src: rec.hf_audio_src ?? '',
       hf_speaker:   rec.hf_speaker   ?? '',
-      tts_lang:     rec.tts_lang     ?? tts?.lang ?? 'en',
-      tts_text:     rec.tts_text     ?? tts?.text ?? rec.language,
       has_audio:    rec.hasAudio !== false,
       speakers:     rec.speakers  ?? 0,
       description:  rec.description ?? '',
@@ -790,7 +747,7 @@ function Breadcrumb({ crumbs }) {
   );
 }
 
-function DialectMap() {
+function DialectMap({ onStartProtocol, onGoUpload, onOpenEcho }) {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const hoveredIdRef = useRef(null);
@@ -803,9 +760,9 @@ function DialectMap() {
 
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [communityUploads, setCommunityUploads] = useState([]);
   const [dialectRecordings, setDialectRecordings] = useState([]);
+  const [hfCount, setHfCount] = useState(0);
 
   // CSV country names differ from DIALECT_DATA keys — normalise them
   const CSV_COUNTRY_MAP = {
@@ -842,6 +799,7 @@ function DialectMap() {
   useEffect(() => {
     fetchHFDialects().then(hfSamples => {
       hfDataRef.current = hfSamples;
+      setHfCount(hfSamples.length);
       // If the map source is already ready, update it now; otherwise style.load will handle it
       if (sourceReadyRef.current && mapRef.current?.getSource('recordings')) {
         const existing = SAMPLE_RECORDINGS.map(toGeoJSONFeature);
@@ -891,33 +849,13 @@ function DialectMap() {
   const currentEra = dialectInfo?.timeline[timelineIndex] ?? null;
   const totalEras = dialectInfo?.timeline.length ?? 0;
 
-  const clearSpeech = useCallback(() => {
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
-  }, []);
-
-  const speakSample = useCallback(() => {
-    if (!currentEra || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(currentEra.sample);
-    utter.lang = currentEra.accent;
-    utter.rate = 0.82;
-    utter.pitch = 1.0;
-    utter.onstart = () => setIsSpeaking(true);
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utter);
-  }, [currentEra]);
-
   const goEra = useCallback((delta) => {
-    clearSpeech();
     setTimelineIndex(prev => Math.max(0, Math.min(totalEras - 1, prev + delta)));
-  }, [clearSpeech, totalEras]);
+  }, [totalEras]);
 
   const setEra = useCallback((i) => {
-    clearSpeech();
     setTimelineIndex(i);
-  }, [clearSpeech]);
+  }, []);
 
   useEffect(() => {
     // Play a real audio file URL — stops any previous clip first
@@ -926,25 +864,19 @@ function DialectMap() {
         window._currentAudio.pause();
         window._currentAudio.currentTime = 0;
       }
-      window.speechSynthesis?.cancel();
       const audio = new Audio(src);
       window._currentAudio = audio;
       audio.play().catch(() => {});
     };
 
-    // TTS fallback for pins without a real recording
-    window._hearDialect = (lang, text) => {
-      if (window._currentAudio) {
-        window._currentAudio.pause();
-        window._currentAudio = null;
-      }
-      if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang  = lang;
-      utter.rate  = 0.82;
-      utter.pitch = 1.0;
-      window.speechSynthesis.speak(utter);
+    window._startProtocol = (lang) => {
+      if (onStartProtocol) onStartProtocol(lang);
+    };
+    window._goUpload = () => {
+      if (onGoUpload) onGoUpload();
+    };
+    window._openEcho = (language, location, audioSrc, text) => {
+      if (onOpenEcho) onOpenEcho({ language, location, audioSrc, text });
     };
 
     mapboxgl.accessToken = 'pk.eyJ1IjoiZ2RyNjY0IiwiYSI6ImNtbTNnemljNjAwb3cycXF5Y2VuZGNoamwifQ.OcRTxaB1n23tj98mtjnKCw';
@@ -1052,10 +984,8 @@ function DialectMap() {
         selectedIdRef.current = fid;
         setSelected(selectedIdRef.current, true);
 
-        window.speechSynthesis?.cancel();
         setSelectedCountry(name);
         setTimelineIndex(0);
-        setIsSpeaking(false);
 
         mapRef.current.flyTo({
           center: [e.lngLat.lng, e.lngLat.lat],
@@ -1177,26 +1107,23 @@ function DialectMap() {
           </div>
           ${speakerLine}`;
 
+        const isEndangered = ['vulnerable','definitely_endangered','severely_endangered','critically_endangered','extinct'].includes(props.endangerment);
+        const safeLangName = (props.language ?? '').replace(/'/g, "\\'");
+
+        const safeSrc = (props.hf_audio_src ?? '').replace(/'/g, '');
+
         let body;
-        if (props.has_audio) {
-          // ── Pin with audio: real HF recording takes priority over TTS ──
-          const safeText = (props.tts_text ?? props.language).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-          const safeLang = (props.tts_lang ?? 'en').replace(/'/g, '');
-          const safeSrc  = (props.hf_audio_src ?? '').replace(/'/g, '');
-
-          const onclick = safeSrc
-            ? `window._playAudio('${safeSrc}')`
-            : `window._hearDialect('${safeLang}','${safeText}')`;
-
+        if (safeSrc) {
+          // ── Pin with a real audio recording ──
           const transcript = props.hf_text
             ? `<div style="margin-top:7px;font-size:9px;color:#7a7a8c;font-style:italic;line-height:1.6;">"${props.hf_text}"</div>`
             : '';
-          const sourceTag = safeSrc
-            ? `<div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🤗 real recording · CC BY-SA 4.0</div>`
-            : `<div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🔊 synthesised voice</div>`;
+
+          const safeLocation = (props.location ?? '').replace(/'/g, "\\'");
+          const safeText     = (props.hf_text   ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
           body = `
-            <button onclick="${onclick}"
+            <button onclick="window._playAudio('${safeSrc}')"
               style="margin-top:9px;width:100%;background:rgba(124,58,237,0.15);
                 border:1px solid rgba(124,58,237,0.35);color:#c4b5fd;border-radius:7px;
                 padding:7px 0;font-family:'Space Mono',monospace;font-size:10px;
@@ -1204,19 +1131,37 @@ function DialectMap() {
               ▶ Hear sample
             </button>
             ${transcript}
-            ${sourceTag}`;
+            <div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🤗 real recording · CC BY-SA 4.0</div>
+            <button onclick="window._openEcho('${safeLangName}','${safeLocation}','${safeSrc}','${safeText}')"
+              style="margin-top:8px;width:100%;background:rgba(52,211,153,0.08);
+                border:1px solid rgba(52,211,153,0.28);color:#6ee7b7;border-radius:7px;
+                padding:7px 0;font-family:'Space Mono',monospace;font-size:10px;
+                cursor:pointer;letter-spacing:0.5px;">
+              ◉ Echo this voice
+            </button>`;
         } else {
           // ── Placeholder pin — no audio yet ──
           const desc = props.description
             ? `<p style="font-size:10.5px;color:#9090a8;line-height:1.7;margin:10px 0 0;">${props.description}</p>`
             : '';
-          body = `
-            ${desc}
-            <div style="margin-top:12px;padding:10px 12px;border-radius:8px;
-              background:rgba(124,58,237,0.07);border:1px dashed rgba(124,58,237,0.28);text-align:center;">
-              <div style="font-size:9.5px;color:#5a5a70;margin-bottom:4px;">No recordings in our archive yet.</div>
-              <div style="font-size:10px;color:#a78bfa;">Be the first to contribute one ↗</div>
-            </div>`;
+
+          const preserveBtn = isEndangered
+            ? `<button onclick="window._startProtocol('${safeLangName}')"
+                style="margin-top:10px;width:100%;background:rgba(196,181,253,0.12);
+                  border:1px solid rgba(196,181,253,0.4);color:#e2d9ff;border-radius:7px;
+                  padding:8px 0;font-family:'Space Mono',monospace;font-size:10px;
+                  cursor:pointer;letter-spacing:0.5px;">
+                ◉ Preserve this language
+              </button>`
+            : `<div onclick="window._goUpload()" style="margin-top:12px;padding:10px 12px;border-radius:8px;
+                background:rgba(124,58,237,0.07);border:1px dashed rgba(124,58,237,0.28);text-align:center;cursor:pointer;"
+                onmouseover="this.style.background='rgba(124,58,237,0.14)'"
+                onmouseout="this.style.background='rgba(124,58,237,0.07)'">
+                <div style="font-size:9.5px;color:#5a5a70;margin-bottom:4px;">No recordings in our archive yet.</div>
+                <div style="font-size:10px;color:#a78bfa;">Be the first to contribute one ↗</div>
+              </div>`;
+
+          body = `${desc}${preserveBtn}`;
         }
 
         if (popupRef.current) popupRef.current.remove();
@@ -1235,10 +1180,11 @@ function DialectMap() {
     });
 
     return () => {
-      window.speechSynthesis?.cancel();
       if (window._currentAudio) { window._currentAudio.pause(); delete window._currentAudio; }
-      delete window._hearDialect;
       delete window._playAudio;
+      delete window._startProtocol;
+      delete window._goUpload;
+      delete window._openEcho;
       if (popupRef.current) popupRef.current.remove();
       mapRef.current?.remove();
     };
@@ -1252,9 +1198,7 @@ function DialectMap() {
       );
       selectedIdRef.current = null;
     }
-    window.speechSynthesis?.cancel();
     setSelectedCountry(null);
-    setIsSpeaking(false);
   }, []);
 
   const flyToWorld = useCallback(() => {
@@ -1299,6 +1243,21 @@ function DialectMap() {
       {!selectedCountry && (
         <div className="hint-pill">Click any country · Click a pulse to identify a dialect</div>
       )}
+
+      {/* Voice counter */}
+      <div style={{
+        position: 'fixed', top: '62px', right: '16px',
+        background: 'rgba(10,8,18,0.78)', border: '1px solid rgba(124,58,237,0.22)',
+        borderRadius: '20px', padding: '6px 16px',
+        fontFamily: "'Space Mono',monospace", fontSize: '10px', color: '#7a7a8c',
+        backdropFilter: 'blur(14px)', zIndex: 30, whiteSpace: 'nowrap',
+      }}>
+        you are looking at{' '}
+        <span style={{ color: '#c4b5fd', fontWeight: 700 }}>
+          {(SAMPLE_RECORDINGS.length + hfCount + dialectRecordings.length + communityUploads.length).toLocaleString()}
+        </span>
+        {' '}voices
+      </div>
 
       <Breadcrumb crumbs={[
         { label: 'World', onClick: flyToWorld },
@@ -1390,9 +1349,6 @@ function DialectMap() {
                     <div style={s.label}>Sample Phrase</div>
                     <div style={{ fontSize: '12.5px', color: '#e0ddf0', fontStyle: 'italic', lineHeight: '1.55', marginTop: '4px' }}>"{currentEra.sample}"</div>
                   </div>
-                  <button className="speak-btn" onClick={speakSample} disabled={isSpeaking}>
-                    {isSpeaking ? <span style={{ animation: 'pulse 1.1s infinite', display: 'inline-block' }}>◉ Speaking…</span> : '▶  Hear Pronunciation'}
-                  </button>
                 </div>
               )}
 

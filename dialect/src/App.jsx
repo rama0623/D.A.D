@@ -2,6 +2,8 @@ import { useState } from 'react'
 import './App.css'
 import DialectMap from './DialectMap'
 import UploadTab from './UploadTab'
+import LastWordsProtocol from './LastWordsProtocol'
+import EchoChamber from './EchoChamber'
 
 const NAV_FONT = `@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap');`
 
@@ -31,6 +33,13 @@ function TabBtn({ label, active, onClick }) {
 
 function App() {
   const [tab, setTab] = useState('globe')
+  const [protocolLang, setProtocolLang] = useState('')
+  const [echoData, setEchoData] = useState(null) // { language, location, audioSrc, text }
+
+  const handleStartProtocol = (lang) => {
+    setProtocolLang(lang)
+    setTab('protocol')
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#0a0812', display: 'flex', flexDirection: 'column' }}>
@@ -61,6 +70,7 @@ function App() {
         </div>
         <TabBtn label="🌐  Globe" active={tab === 'globe'} onClick={() => setTab('globe')} />
         <TabBtn label="⬆  Upload" active={tab === 'upload'} onClick={() => setTab('upload')} />
+        <TabBtn label="◉  Protocol" active={tab === 'protocol'} onClick={() => setTab('protocol')} />
       </div>
 
       {/* ── Content area ── */}
@@ -71,7 +81,11 @@ function App() {
           visibility: tab === 'globe' ? 'visible' : 'hidden',
           pointerEvents: tab === 'globe' ? 'auto' : 'none',
         }}>
-          <DialectMap />
+          <DialectMap
+            onStartProtocol={handleStartProtocol}
+            onGoUpload={() => setTab('upload')}
+            onOpenEcho={setEchoData}
+          />
         </div>
 
         {/* Upload — mounted only when active, scrollable overlay */}
@@ -80,7 +94,25 @@ function App() {
             <UploadTab />
           </div>
         )}
+
+        {/* Protocol — mounted only when active, scrollable overlay */}
+        {tab === 'protocol' && (
+          <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', zIndex: 100 }}>
+            <LastWordsProtocol initialLanguage={protocolLang} />
+          </div>
+        )}
       </div>
+
+      {/* Echo Chamber — rendered as a global overlay above everything */}
+      {echoData && (
+        <EchoChamber
+          language={echoData.language}
+          location={echoData.location}
+          audioSrc={echoData.audioSrc}
+          text={echoData.text}
+          onClose={() => setEchoData(null)}
+        />
+      )}
     </div>
   )
 }

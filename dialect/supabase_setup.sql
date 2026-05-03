@@ -54,6 +54,10 @@ CREATE POLICY "public_read_dialect_recordings"
 CREATE POLICY "public_read_community_uploads"
   ON community_uploads FOR SELECT USING (true);
 
+-- Anonymous inserts allowed for seeding dialect_recordings (seed script uses anon key)
+CREATE POLICY "anon_insert_dialect_recordings"
+  ON dialect_recordings FOR INSERT TO anon WITH CHECK (true);
+
 -- Anonymous inserts allowed for community uploads (must specify TO anon explicitly)
 CREATE POLICY "anon_insert_community_uploads"
   ON community_uploads FOR INSERT TO anon WITH CHECK (true);

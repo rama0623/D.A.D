@@ -17,6 +17,141 @@ const COUNTRY_NAME_MAP = {
   'Federal Republic of Nigeria': 'Nigeria',
 };
 
+// Color per endangerment level — the "Sonic Bloom" palette
+const ENDANGERMENT_COLORS = {
+  safe:                   '#f5a623',  // vibrant gold  — active dialect
+  vulnerable:             '#a78bfa',  // fading purple — mostly elderly speakers
+  definitely_endangered:  '#8b5cf6',
+  severely_endangered:    '#7c3aed',
+  critically_endangered:  '#c4b5fd',
+  extinct:                '#e6e6f0',  // ghostly white — historical archive
+  unknown:                '#f5a623',
+};
+
+// Hardcoded sample recordings — replace / extend with real DB data later
+const SAMPLE_RECORDINGS = [
+  // Africa
+  { id: 1,  language: 'Yoruba',            location: 'Ibadan, Nigeria',           lat: 7.3775,   lng: 3.9470,   endangerment: 'safe' },
+  { id: 2,  language: 'Naija Pidgin',      location: 'Lagos, Nigeria',            lat: 6.5244,   lng: 3.3792,   endangerment: 'safe' },
+  { id: 3,  language: 'Igbo',              location: 'Onitsha, Nigeria',          lat: 6.1667,   lng: 6.7833,   endangerment: 'safe' },
+  { id: 4,  language: 'Efik',              location: 'Calabar, Nigeria',          lat: 4.9517,   lng: 8.3220,   endangerment: 'definitely_endangered' },
+  { id: 5,  language: 'Amharic',           location: 'Addis Ababa, Ethiopia',     lat: 9.0250,   lng: 38.7469,  endangerment: 'safe' },
+  { id: 6,  language: 'Tigrinya',          location: 'Mekelle, Ethiopia',         lat: 13.4967,  lng: 39.4769,  endangerment: 'vulnerable' },
+  { id: 7,  language: 'Oromo',             location: 'Jimma, Ethiopia',           lat: 7.6667,   lng: 36.8333,  endangerment: 'safe' },
+  // South & Southeast Asia
+  { id: 8,  language: 'Hinglish',          location: 'Mumbai, India',             lat: 19.0760,  lng: 72.8777,  endangerment: 'safe' },
+  { id: 9,  language: 'Kashmiri',          location: 'Srinagar, India',           lat: 34.0837,  lng: 74.7973,  endangerment: 'definitely_endangered' },
+  { id: 10, language: 'Tamil',             location: 'Chennai, India',            lat: 13.0827,  lng: 80.2707,  endangerment: 'safe' },
+  { id: 11, language: 'Punjabi',           location: 'Amritsar, India',           lat: 31.6340,  lng: 74.8723,  endangerment: 'safe' },
+  { id: 12, language: 'Javanese',          location: 'Yogyakarta, Indonesia',     lat: -7.7956,  lng: 110.3695, endangerment: 'vulnerable' },
+  { id: 13, language: 'Batak Toba',        location: 'Medan, Indonesia',          lat: 3.5952,   lng: 98.6722,  endangerment: 'definitely_endangered' },
+  // East Asia
+  { id: 14, language: 'Cantonese',         location: 'Guangzhou, China',          lat: 23.1291,  lng: 113.2644, endangerment: 'vulnerable' },
+  { id: 15, language: 'Shanghainese',      location: 'Shanghai, China',           lat: 31.2304,  lng: 121.4737, endangerment: 'definitely_endangered' },
+  { id: 16, language: 'Kansai-ben',        location: 'Osaka, Japan',              lat: 34.6937,  lng: 135.5023, endangerment: 'safe' },
+  { id: 17, language: 'Tohoku dialect',    location: 'Sendai, Japan',             lat: 38.2688,  lng: 140.8721, endangerment: 'definitely_endangered' },
+  { id: 18, language: 'Okinawan',          location: 'Naha, Japan',               lat: 26.2124,  lng: 127.6809, endangerment: 'critically_endangered' },
+  // Europe
+  { id: 19, language: 'Scottish Gaelic',   location: 'Inverness, Scotland',       lat: 57.4778,  lng: -4.2247,  endangerment: 'severely_endangered' },
+  { id: 20, language: 'Welsh',             location: 'Bangor, Wales',             lat: 53.2274,  lng: -4.1293,  endangerment: 'vulnerable' },
+  { id: 21, language: 'Cornish',           location: 'Penzance, England',         lat: 50.1187,  lng: -5.5374,  endangerment: 'extinct' },
+  { id: 22, language: 'Basque',            location: 'San Sebastián, Spain',      lat: 43.3183,  lng: -1.9812,  endangerment: 'vulnerable' },
+  { id: 23, language: 'Sicilian',          location: 'Palermo, Italy',            lat: 38.1157,  lng: 13.3615,  endangerment: 'definitely_endangered' },
+  { id: 24, language: 'Geordie',           location: 'Newcastle, England',        lat: 54.9783,  lng: -1.6178,  endangerment: 'safe' },
+  // Americas
+  { id: 25, language: 'Yucatec Maya',      location: 'Mérida, Mexico',            lat: 20.9674,  lng: -89.5926, endangerment: 'definitely_endangered' },
+  { id: 26, language: 'Classical Nahuatl', location: 'Cholula, Mexico',           lat: 19.0634,  lng: -98.3023, endangerment: 'extinct' },
+  { id: 27, language: 'Carioca Portuguese',location: 'Rio de Janeiro, Brazil',    lat: -22.9068, lng: -43.1729, endangerment: 'safe' },
+  { id: 28, language: 'Nordestino Portuguese', location: 'Salvador, Brazil',      lat: -12.9714, lng: -38.5014, endangerment: 'safe' },
+  { id: 29, language: 'Costeño Spanish',   location: 'Barranquilla, Colombia',    lat: 10.9639,  lng: -74.7964, endangerment: 'safe' },
+  // Oceania
+  { id: 30, language: 'Tok Pisin',         location: 'Port Moresby, PNG',         lat: -9.4438,  lng: 147.1803, endangerment: 'safe' },
+  { id: 31, language: 'Hiri Motu',         location: 'Bereina, PNG',              lat: -8.6000,  lng: 146.4833, endangerment: 'extinct' },
+  // Middle East / North Africa
+  { id: 32, language: 'Egyptian Arabic',   location: 'Cairo, Egypt',              lat: 30.0444,  lng: 31.2357,  endangerment: 'safe' },
+  { id: 33, language: 'Saidi Arabic',      location: 'Luxor, Egypt',              lat: 25.6872,  lng: 32.6396,  endangerment: 'vulnerable' },
+  // Russia
+  { id: 34, language: 'Tatar',             location: 'Kazan, Russia',             lat: 55.7879,  lng: 49.1233,  endangerment: 'definitely_endangered' },
+  { id: 35, language: 'Siberian Russian',  location: 'Novosibirsk, Russia',       lat: 55.0084,  lng: 82.9357,  endangerment: 'safe' },
+
+  // ── Placeholder pins — full linguistic data, no audio yet ──────────────────
+  // Africa
+  { id: 101, language: 'Zulu',              location: 'Durban, South Africa',       lat: -29.8587, lng: 31.0218,  endangerment: 'safe',                  speakers: 12100000, hasAudio: false, description: 'The most widely spoken Bantu language in South Africa. Its click consonants, borrowed from Khoisan neighbours, give Zulu one of the richest sound inventories on Earth.' },
+  { id: 102, language: 'Xhosa',             location: 'East London, South Africa',  lat: -32.9858, lng: 27.8635,  endangerment: 'safe',                  speakers: 8200000,  hasAudio: false, description: "Nelson Mandela's mother tongue. Xhosa's three distinct click consonants — dental, lateral, and palatal — mark it as one of the world's most phonologically complex languages." },
+  { id: 103, language: 'Swahili',           location: 'Dar es Salaam, Tanzania',    lat: -6.7924,  lng: 39.2083,  endangerment: 'safe',                  speakers: 200000000,hasAudio: false, description: 'The lingua franca of East Africa for centuries. A Bantu tongue enriched by Arabic, Persian, and Portuguese — the word "safari" is Swahili for "journey."' },
+  { id: 104, language: 'Wolof',             location: 'Dakar, Senegal',             lat: 14.7167,  lng: -17.4677, endangerment: 'safe',                  speakers: 5000000,  hasAudio: false, description: 'De facto national language of Senegal, spoken by over 90% of the population as first or second tongue. Known for its elaborate pronouns reflecting social hierarchy.' },
+  { id: 105, language: 'Akan (Twi)',        location: 'Kumasi, Ghana',              lat: 6.6885,   lng: -1.6244,  endangerment: 'safe',                  speakers: 9000000,  hasAudio: false, description: 'Heart language of the Ashanti Kingdom. An Akan proverb says: "When the fool is told a proverb, its meaning has to be explained to him." Proverb-speech is the mark of wisdom here.' },
+  { id: 106, language: 'Kinyarwanda',       location: 'Kigali, Rwanda',             lat: -1.9403,  lng: 29.8739,  endangerment: 'safe',                  speakers: 9800000,  hasAudio: false, description: "Rwanda is Africa's most linguistically unified country — virtually every citizen speaks the same indigenous language, a remarkable case of monolingualism without colonially imposed uniformity." },
+  { id: 107, language: 'Lingala',           location: 'Kinshasa, DRC',              lat: -4.3317,  lng: 15.3139,  endangerment: 'safe',                  speakers: 2000000,  hasAudio: false, description: 'Born as a trade pidgin on the Congo River, Lingala became the language of Congolese rumba and soukous — music that electrified the world from the dance halls of Kinshasa.' },
+  { id: 108, language: 'Bambara',           location: 'Bamako, Mali',               lat: 12.6392,  lng: -8.0029,  endangerment: 'safe',                  speakers: 3000000,  hasAudio: false, description: 'The trade language of the Niger River bend. Its oral traditions preserve the history of the Mali and Songhai empires in epic griot poetry — living archives sung from memory.' },
+  { id: 109, language: 'Somali',            location: 'Mogadishu, Somalia',         lat: 2.0469,   lng: 45.3182,  endangerment: 'safe',                  speakers: 21800000, hasAudio: false, description: 'A language with one of the richest oral poetry traditions on Earth. Competitive verse-battle (gabay) is as serious as sport here — waged between clans, warlords, and generations.' },
+  { id: 110, language: 'Shona',             location: 'Harare, Zimbabwe',           lat: -17.8252, lng: 31.0335,  endangerment: 'safe',                  speakers: 14200000, hasAudio: false, description: 'Descending from the builders of Great Zimbabwe\'s stone walls, Shona carries the heritage of the Munhumutapa empire in its tones, proverbs, and sacred spirit medium traditions.' },
+  { id: 111, language: 'Malagasy',          location: 'Antananarivo, Madagascar',   lat: -18.9137, lng: 47.5361,  endangerment: 'safe',                  speakers: 25000000, hasAudio: false, description: "Madagascar's language is not African but Austronesian — Malagasy speakers arrived by outrigger canoe from Borneo over 1,500 years ago, crossing 6,000 kilometres of open ocean." },
+  { id: 112, language: 'Tamazight (Berber)',location: 'Agadir, Morocco',            lat: 30.4278,  lng: -9.5981,  endangerment: 'vulnerable',            speakers: 8000000,  hasAudio: false, description: 'The indigenous language of North Africa, spoken for over 4,000 years before Arabic arrived. Written in the ancient Tifinagh script, Tamazight is experiencing a fragile revival.' },
+  { id: 113, language: 'Fula (Fulfulde)',   location: 'Fouta Djalon, Guinea',       lat: 11.3678,  lng: -12.3631, endangerment: 'safe',                  speakers: 40000000, hasAudio: false, description: 'Spread across a belt from Senegal to Sudan by pastoral Fulani nomads — one of Africa\'s most geographically dispersed languages, a diaspora written in livestock trails.' },
+  { id: 114, language: 'Dogon',             location: 'Bandiagara Escarpment, Mali',lat: 14.3476,  lng: -3.6103,  endangerment: 'vulnerable',            speakers: 800000,   hasAudio: false, description: 'Perched in ancient cliff-dwellings above the Sahara, Dogon people preserved a language of such cosmological complexity that their star knowledge still baffles modern astronomers.' },
+  { id: 115, language: 'Hadza',             location: 'Lake Eyasi, Tanzania',       lat: -3.6761,  lng: 35.0683,  endangerment: 'critically_endangered', speakers: 1300,     hasAudio: false, description: 'One of the last click-language hunter-gatherer tongues with no known relatives — Hadza may be a linguistic survivor from humanity\'s earliest days in the Rift Valley. Fewer than 1,300 speakers.' },
+  { id: 116, language: "Ju|'hoansi (!Kung)",location: 'Tsumkwe, Namibia',           lat: -19.6400, lng: 20.4900,  endangerment: 'vulnerable',            speakers: 14000,    hasAudio: false, description: 'With four distinct click consonants and a territory spanning Namibia and Botswana, the Ju|\'hoansi carry 10,000 years of hunter-gatherer ecological knowledge in their language.' },
+  { id: 117, language: 'Dinka',             location: 'Juba, South Sudan',          lat: 4.8594,   lng: 31.5713,  endangerment: 'safe',                  speakers: 4500000,  hasAudio: false, description: 'The most widely spoken language of South Sudan. Dinka has an elaborate tonal system — a single syllable spoken in four different tones carries four entirely unrelated meanings.' },
+  // Middle East / Caucasus
+  { id: 118, language: 'Kurdish (Kurmanji)',location: 'Diyarbakır, Turkey',         lat: 37.9114,  lng: 40.2351,  endangerment: 'vulnerable',            speakers: 15000000, hasAudio: false, description: 'The most spoken language without a state. Spread across Turkey, Iraq, Iran, and Syria, Kurdish survived decades of school bans and broadcasting prohibitions yet thrives in its mountain homeland.' },
+  { id: 119, language: 'Armenian',          location: 'Yerevan, Armenia',           lat: 40.1872,  lng: 44.5152,  endangerment: 'safe',                  speakers: 3500000,  hasAudio: false, description: 'An entire branch of the Indo-European family occupied by a single language. Armenian survived the 1915 genocide that killed 1.5 million of its speakers, preserved in diaspora communities worldwide.' },
+  { id: 120, language: 'Georgian',          location: 'Tbilisi, Georgia',           lat: 41.6938,  lng: 44.8015,  endangerment: 'safe',                  speakers: 3700000,  hasAudio: false, description: 'One of the world\'s oldest literary languages with its own unique script created in the 5th century. Notable for consonant clusters: "gvprtskvnis" means "he peels it" — 8 consonants, no vowels.' },
+  { id: 121, language: 'Pashto',            location: 'Kandahar, Afghanistan',      lat: 31.6130,  lng: 65.7100,  endangerment: 'safe',                  speakers: 60000000, hasAudio: false, description: 'The language of the Pashtunwali tribal code. Pashto poetry — from ancient war epics to romantic verses — is recited from memory at every gathering across Afghanistan and Pakistan.' },
+  // South Asia
+  { id: 122, language: 'Nepali',            location: 'Kathmandu, Nepal',           lat: 27.7172,  lng: 85.3240,  endangerment: 'safe',                  speakers: 17000000, hasAudio: false, description: 'The official language of Nepal, spoken in the shadow of the Himalayas. Nepali is the lingua franca for over 120 indigenous ethnic groups across one of the world\'s most linguistically diverse nations.' },
+  { id: 123, language: 'Sinhala',           location: 'Colombo, Sri Lanka',         lat: 6.9271,   lng: 79.8612,  endangerment: 'safe',                  speakers: 17000000, hasAudio: false, description: 'An Indo-Aryan outlier in a Dravidian sea, Sinhala developed in remarkable isolation on the island of Sri Lanka. Its ancient Pali Buddhist literary tradition stretches back over 2,000 years.' },
+  { id: 124, language: 'Telugu',            location: 'Hyderabad, India',           lat: 17.3850,  lng: 78.4867,  endangerment: 'safe',                  speakers: 82000000, hasAudio: false, description: 'The "Italian of the East" — linguists gave Telugu this nickname for its melodic quality, where almost every word ends in a vowel. Classical poetry from the Vijayanagara Empire still moves audiences today.' },
+  { id: 125, language: 'Tibetan',           location: 'Lhasa, Tibet',               lat: 29.6520,  lng: 91.1172,  endangerment: 'definitely_endangered', speakers: 1200000,  hasAudio: false, description: 'The vessel of Vajrayana Buddhism, Tibetan preserves a medical, philosophical, and astronomical tradition 1,300 years deep. Inside Tibet, Mandarin systematically displaces it in schools.' },
+  { id: 126, language: 'Uyghur',            location: 'Kashgar, China',             lat: 39.4707,  lng: 75.9897,  endangerment: 'vulnerable',            speakers: 12000000, hasAudio: false, description: 'A Turkic language with a rich Silk Road literary heritage — muqam music, oral epic, Uyghur Kingdom manuscripts. Now facing severe transmission challenges in Xinjiang.' },
+  // East Asia
+  { id: 127, language: 'Mongolian',         location: 'Ulaanbaatar, Mongolia',      lat: 47.8864,  lng: 106.9057, endangerment: 'safe',                  speakers: 5200000,  hasAudio: false, description: 'The language that once commanded an empire from Korea to Vienna. Written Mongolian, read vertically in its classical script, is a 900-year unbroken literary tradition still alive in Inner Mongolia.' },
+  { id: 128, language: 'Ainu',              location: 'Nibutani, Japan',            lat: 42.5640,  lng: 142.1280, endangerment: 'critically_endangered', speakers: 10,       hasAudio: false, description: 'The indigenous language of Hokkaido with no known relatives anywhere on Earth. In 2019 Japan officially recognised Ainu people as indigenous — but only ~10 fluent elders remain. Each funeral is a library burning.' },
+  { id: 129, language: 'Manchu',            location: 'Shenyang, China',            lat: 41.7968,  lng: 123.4328, endangerment: 'critically_endangered', speakers: 20,       hasAudio: false, description: 'Once the imperial tongue of the Qing Dynasty — 200 years of Chinese imperial edicts, court records, and military commands. Fewer than 20 fluent speakers survive, all elderly, in one remote village.' },
+  { id: 130, language: 'Naxi (Dongba)',     location: 'Lijiang, China',             lat: 26.8721,  lng: 100.2299, endangerment: 'definitely_endangered', speakers: 300000,   hasAudio: false, description: "The Naxi Dongba script is the world's only pictographic writing system still in active use. Naxi priests chant cosmological texts in a ceremonial register different from everyday speech." },
+  // Southeast Asia
+  { id: 131, language: 'Burmese',           location: 'Yangon, Myanmar',            lat: 16.8661,  lng: 96.1951,  endangerment: 'safe',                  speakers: 33000000, hasAudio: false, description: 'A Sino-Tibetan language with a circular script from the Brahmic family. The formal written language and colloquial spoken Burmese differ so starkly that scholars classify it as diglossia.' },
+  { id: 132, language: 'Khmer',             location: 'Phnom Penh, Cambodia',       lat: 11.5564,  lng: 104.9282, endangerment: 'safe',                  speakers: 16000000, hasAudio: false, description: 'The oldest written language in Southeast Asia, with inscriptions from 611 CE. Khmer built Angkor Wat and encoded its hydraulic engineering knowledge in stone inscriptions that still resist full translation.' },
+  { id: 133, language: 'Tagalog',           location: 'Manila, Philippines',        lat: 14.5995,  lng: 120.9842, endangerment: 'safe',                  speakers: 28000000, hasAudio: false, description: 'The basis of Filipino, spoken across 7,641 islands. Tagalog has six different verbal inflections to specify the semantic role of the most prominent participant in a sentence — a grammatical precision few languages match.' },
+  { id: 134, language: 'Balinese',          location: 'Ubud, Bali',                 lat: -8.5069,  lng: 115.2625, endangerment: 'vulnerable',            speakers: 3300000,  hasAudio: false, description: 'A language with elaborate speech levels — you speak entirely differently to a king, an equal, or a servant. Balinese classical literature, gamelan, and shadow theatre are encoded in its ceremonial register.' },
+  // Americas
+  { id: 135, language: 'Quechua',           location: 'Cusco, Peru',                lat: -13.5320, lng: -71.9675, endangerment: 'vulnerable',            speakers: 8000000,  hasAudio: false, description: 'The tongue of the Inca Empire, spread across 4,000 km of South America by runners who memorised census data encoded in knotted strings (quipu). Today 8 million speakers keep it alive across the Andes.' },
+  { id: 136, language: 'Aymara',            location: 'La Paz, Bolivia',            lat: -16.5000, lng: -68.1193, endangerment: 'definitely_endangered', speakers: 2200000,  hasAudio: false, description: 'Spoken beside Lake Titicaca, Aymara conceptualises time backwards: the past is "in front" (visible), the future is "behind" (unseen). A profound philosophical inversion encoded in grammar.' },
+  { id: 137, language: 'Guaraní',           location: 'Asunción, Paraguay',         lat: -25.2867, lng: -57.6470, endangerment: 'safe',                  speakers: 6000000,  hasAudio: false, description: "One of the Western Hemisphere's great success stories — Guaraní is co-official with Spanish in Paraguay and spoken by 90% of the population regardless of ethnicity. Proof that indigenous languages can thrive." },
+  { id: 138, language: 'Cherokee',          location: 'Tahlequah, Oklahoma',        lat: 35.9151,  lng: -94.9702, endangerment: 'severely_endangered',   speakers: 2000,     hasAudio: false, description: 'Cherokee achieved something unique in 1821: a full syllabary invented by one man — Sequoyah, who was illiterate in English. Within years, Cherokee had higher literacy rates than neighbouring white settlers. Now ~2,000 speakers.' },
+  { id: 139, language: 'Navajo',            location: 'Window Rock, Arizona',       lat: 35.6789,  lng: -109.0448,endangerment: 'vulnerable',            speakers: 170000,   hasAudio: false, description: 'Navajo Code Talkers used this language as an unbreakable WWII cipher — its complexity proved machine-uncrackable. Today 170,000 speakers hold the American Southwest\'s deepest ecological and spiritual memory.' },
+  { id: 140, language: 'Lakota',            location: 'Pine Ridge, South Dakota',   lat: 43.0325,  lng: -102.5560,endangerment: 'severely_endangered',   speakers: 2000,     hasAudio: false, description: 'The language of the Sioux Nation, keeper of the Black Hills. Lakota oral tradition preserves star knowledge and ecological wisdom accumulated over 10,000 years on the Great Plains. ~2,000 fluent speakers remain.' },
+  { id: 141, language: 'Hawaiian',          location: 'Hilo, Hawaii',               lat: 19.7297,  lng: -155.0900,endangerment: 'severely_endangered',   speakers: 24000,    hasAudio: false, description: 'In 1896 Hawaiian was banned from its own homeland\'s schools. By 1985 fewer than 50 children grew up speaking it. The Pūnana Leo language nest movement pulled it back — 24,000 semi-fluent speakers now.' },
+  { id: 142, language: 'Zapotec',           location: 'Oaxaca City, Mexico',        lat: 17.0732,  lng: -96.7266, endangerment: 'vulnerable',            speakers: 460000,   hasAudio: false, description: 'One of Mesoamerica\'s oldest continuous civilisations — Zapotec was being written at Monte Albán 2,500 years ago. It survives today as 50+ mutually unintelligible variants across Oaxaca\'s mountain valleys.' },
+  { id: 143, language: 'Tzotzil',           location: 'San Cristóbal de las Casas', lat: 16.7370,  lng: -92.6376, endangerment: 'definitely_endangered', speakers: 404000,   hasAudio: false, description: 'A Mayan language spoken in the highlands of Chiapas. Tzotzil cosmology places the home at the centre of the universe — and Chamula, its ceremonial capital, has never been conquered. The language embeds that resistance.' },
+  { id: 144, language: 'Mapudungun',        location: 'Temuco, Chile',              lat: -38.7396, lng: -72.5900, endangerment: 'definitely_endangered', speakers: 200000,   hasAudio: false, description: 'Language of the Mapuche — the only indigenous people who resisted both the Inca and Spanish empires. Its verb system can pack an entire complex sentence, with fifteen morphemes, into a single word.' },
+  { id: 145, language: 'Wayuu',             location: 'Riohacha, Colombia',         lat: 11.5444,  lng: -72.9072, endangerment: 'safe',                  speakers: 400000,   hasAudio: false, description: 'The Wayuu weave their cosmology into mochila bags whose geometric patterns encode clan identity and knowledge — a textile language as rich as the spoken one.' },
+  // Oceania
+  { id: 146, language: 'Māori',             location: 'Rotorua, New Zealand',       lat: -38.1368, lng: 176.2497, endangerment: 'vulnerable',            speakers: 57000,    hasAudio: false, description: 'In 1987 Māori became an official language of New Zealand after decades of suppression. The Kōhanga Reo language nest movement created a generation of new speakers. Its oratory tradition (whaikōrero) is one of the world\'s great rhetorical arts.' },
+  { id: 147, language: 'Samoan',            location: 'Apia, Samoa',                lat: -13.8506, lng: -171.7513,endangerment: 'safe',                  speakers: 510000,   hasAudio: false, description: 'The formal Samoan oratory tradition (lauga) requires years of apprenticeship. Chiefly speech and commoner speech are almost different languages — metaphor and ancestral reference are grammatically obligatory for leaders.' },
+  { id: 148, language: 'Fijian',            location: 'Suva, Fiji',                 lat: -18.1416, lng: 178.4415, endangerment: 'safe',                  speakers: 300000,   hasAudio: false, description: 'Fijian grammar has a distinction most languages lack: separate pronouns for "you and I" vs "all of us including you." The inclusive/exclusive distinction matters so much it is grammatically obligatory.' },
+  { id: 149, language: 'Chamorro',          location: 'Hagåtña, Guam',              lat: 13.4443,  lng: 144.7937, endangerment: 'critically_endangered', speakers: 45000,    hasAudio: false, description: 'After the 1668 Spanish colonisation killed 90% of the Chamorro population and banned the language for 200 years, it survived in whispers between grandmothers. A revitalisation movement now fights to pass it to children.' },
+  { id: 150, language: 'Warlpiri',          location: 'Lajamanu, Australia',        lat: -18.3400, lng: 130.6300, endangerment: 'definitely_endangered', speakers: 3000,     hasAudio: false, description: 'A Central Australian language with four simultaneous spatial reference systems active in every sentence. Warlpiri dreamtime songs map the landscape in musical routes — meaning and geography fused into one.' },
+  // Europe
+  { id: 151, language: 'Breton',            location: 'Quimper, France',            lat: 47.9965,  lng: -4.0964,  endangerment: 'severely_endangered',   speakers: 200000,   hasAudio: false, description: 'Carried to Brittany by refugees fleeing Anglo-Saxon invasion in the 6th century. Breton\'s fishing villages once rang with it — but the French state\'s 150-year school ban left fewer than 200,000 speakers, almost none under 40.' },
+  { id: 152, language: 'Occitan',           location: 'Toulouse, France',           lat: 43.6047,  lng: 1.4442,   endangerment: 'definitely_endangered', speakers: 150000,   hasAudio: false, description: 'The language of the troubadours — the medieval poets who invented courtly love and shaped all European lyric poetry. Occitan was the language of Provence and of the Cathar heresy. Fewer than 150,000 fluent speakers remain.' },
+  { id: 153, language: 'Faroese',           location: 'Tórshavn, Faroe Islands',    lat: 62.0107,  lng: -6.7744,  endangerment: 'safe',                  speakers: 66000,    hasAudio: false, description: 'A Viking Norse language preserved in Atlantic isolation since the 9th century. With only 66,000 speakers, Faroese has astonishingly complete modern vocabulary — it coined its own words for "computer" and "television."' },
+  { id: 154, language: 'Lower Sorbian',     location: 'Cottbus, Germany',           lat: 51.7563,  lng: 14.3329,  endangerment: 'critically_endangered', speakers: 7000,     hasAudio: false, description: 'The last Slavic language of Central Europe, spoken in Germany\'s Lusatia since the 6th century. With ~7,000 speakers in a German-dominated landscape, Lower Sorbian is a linguistic island barely holding its shore.' },
+  { id: 155, language: 'Aromanian',         location: 'Bitola, North Macedonia',    lat: 41.0297,  lng: 21.3294,  endangerment: 'definitely_endangered', speakers: 100000,   hasAudio: false, description: 'A Latin tongue that survived in the Balkans while Rome crumbled. Aromanian-speaking Vlach shepherds walked transhumance routes from Greece to Albania for millennia, carrying Latin echoes through Orthodox mountains.' },
+  { id: 156, language: 'Võro',              location: 'Võru, Estonia',              lat: 57.8344,  lng: 27.0178,  endangerment: 'vulnerable',            speakers: 75000,    hasAudio: false, description: 'A south Estonian language so distinct from standard Estonian that linguists debate whether it\'s a separate language. Its ancient runic song tradition (regilaul) stretches back millennia, surviving Soviet Russification.' },
+  { id: 157, language: 'Romani',            location: 'Sofia, Bulgaria',            lat: 42.6977,  lng: 23.3219,  endangerment: 'vulnerable',            speakers: 3500000,  hasAudio: false, description: 'The diaspora tongue of the Roma people, descended from Punjabi-speaking migrants who left northwest India around the 9th century. Romani\'s Sanskrit-rooted grammar still echoes its distant Asian origin — a 1,500-year linguistic journey.' },
+];
+
+const ENDANGERMENT_LABELS = {
+  safe:                   'Active dialect',
+  vulnerable:             'Vulnerable — mostly elderly speakers',
+  definitely_endangered:  'Endangered',
+  severely_endangered:    'Severely endangered',
+  critically_endangered:  'Critically endangered',
+  extinct:                'Historical archive — no living speakers',
+  unknown:                'Status unknown',
+};
+
 const DIALECT_DATA = {
   'United States': {
     region: 'North America',
@@ -166,9 +301,11 @@ const DIALECT_DATA = {
 
 const PANEL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap');
-  @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideIn     { from { transform: translateX(100%);  opacity:0; } to { transform:translateX(0);  opacity:1; } }
+  @keyframes slideInLeft { from { transform: translateX(-100%); opacity:0; } to { transform:translateX(0);  opacity:1; } }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-  @keyframes glow { 0%,100% { box-shadow:0 0 6px rgba(167,139,250,0.4); } 50% { box-shadow:0 0 14px rgba(167,139,250,0.9); } }
+  @keyframes glow  { 0%,100% { box-shadow:0 0 6px rgba(167,139,250,0.4); } 50% { box-shadow:0 0 14px rgba(167,139,250,0.9); } }
+
   .dialect-panel { animation: slideIn 0.32s cubic-bezier(0.22,1,0.36,1); }
   .dialect-panel::-webkit-scrollbar { width:5px; }
   .dialect-panel::-webkit-scrollbar-track { background:#0a0812; }
@@ -192,29 +329,342 @@ const PANEL_CSS = `
   .mapboxgl-popup-close-button { color:#c4b5fd !important; font-size:18px !important; top:8px !important; right:10px !important; background:none !important; }
   .mapboxgl-popup-close-button:hover { color:#fff !important; }
   .mapboxgl-popup-tip { border-top-color:#0f0a1e !important; }
+
+  @keyframes crumbIn { from { opacity:0; transform:translateX(-50%) translateY(-10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+  .breadcrumb-bar { animation: crumbIn 0.28s cubic-bezier(0.22,1,0.36,1); }
+  .crumb-btn { background:none; border:none; padding:0 2px; font-family:'Space Mono',monospace; font-size:11px; color:#a78bfa; cursor:pointer; transition:color 0.18s; line-height:1; }
+  .crumb-btn:hover { color:#e2d9ff; }
+  .crumb-btn.crumb-current { color:#f0eee8; cursor:default; pointer-events:none; }
+  .crumb-sep { color:rgba(124,58,237,0.38); font-size:11px; margin:0 6px; user-select:none; }
 `;
 
-// Converts recording rows from Supabase into a Mapbox-ready GeoJSON FeatureCollection.
-// Only includes rows that have been geocoded (lat/lng not null).
-function recordingsToGeoJSON(recordings) {
+// ── UNESCO Atlas of the World's Languages in Danger (2010, updated figures) ──
+// Out of ~7,168 documented languages:
+//   Viable (not in Atlas):   ~4,200   (58.6 %)
+//   At Risk (all threat lvls): ~2,279 (31.8 %)  ← tracked by UNESCO
+//   Documented extinct since 1950: ~230+  (3.2 %)
+//   Unknown/uncategorised:   ~459    (6.4 %)
+// Commonly cited headline: "40 % of the world's languages face extinction."
+const UNESCO_BREAKDOWN = [
+  { color: '#f5a623', label: 'Viable',   sub: 'actively spoken',        count: '~4,200', pct: 0.586 },
+  { color: '#a78bfa', label: 'At risk',  sub: 'UNESCO Atlas entries',   count: '~2,279', pct: 0.318 },
+  { color: '#e6e6f0', label: 'Extinct',  sub: 'lost since 1950',        count: '230+',   pct: 0.032 },
+];
+
+const LOCAL_SAFE    = SAMPLE_RECORDINGS.filter(r => r.endangerment === 'safe'   || r.endangerment === 'unknown').length;
+const LOCAL_AT_RISK = SAMPLE_RECORDINGS.filter(r => ['vulnerable','definitely_endangered','severely_endangered','critically_endangered'].includes(r.endangerment)).length;
+const LOCAL_EXTINCT = SAMPLE_RECORDINGS.filter(r => r.endangerment === 'extinct').length;
+
+function EndangermentMeterWidget() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let rafId;
+    const startAt = performance.now() + 700;
+    const duration = 1900;
+
+    const tick = (now) => {
+      if (now < startAt) { rafId = requestAnimationFrame(tick); return; }
+      const t = Math.min((now - startAt) / duration, 1);
+      setProgress(1 - Math.pow(1 - t, 3)); // ease-out cubic
+      if (t < 1) rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  // SVG donut geometry
+  const R = 44, SW = 9, CX = 60, CY = 62;
+  const C = 2 * Math.PI * R;
+  const sweepLen = C * 0.75; // 270° arc
+
+  // Stagger each segment so they "bloom" in sequence
+  const p1 = Math.min(progress / 0.65, 1);
+  const p2 = Math.min(Math.max((progress - 0.18) / 0.65, 0), 1);
+  const p3 = Math.min(Math.max((progress - 0.36) / 0.65, 0), 1);
+
+  const safeLen = p1 * UNESCO_BREAKDOWN[0].pct * sweepLen;
+  const riskLen = p2 * UNESCO_BREAKDOWN[1].pct * sweepLen;
+  const extLen  = p3 * UNESCO_BREAKDOWN[2].pct * sweepLen;
+
+  // UNESCO at-risk breakdown detail rows
+  const UNESCO_DETAIL = [
+    { label: 'Vulnerable',            count: 607 },
+    { label: 'Definitely endangered', count: 632 },
+    { label: 'Severely endangered',   count: 502 },
+    { label: 'Critically endangered', count: 538 },
+  ];
+
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div style={{
+      position: 'fixed', top: 16, left: 16, zIndex: 10,
+      width: 204,
+      background: 'rgba(10,8,18,0.88)',
+      border: '1px solid rgba(124,58,237,0.32)',
+      borderRadius: 14, padding: '14px 16px 12px',
+      fontFamily: "'Space Mono', monospace", fontSize: 10, color: '#9090a8',
+      backdropFilter: 'blur(12px)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+      animation: 'slideInLeft 0.38s cubic-bezier(0.22,1,0.36,1)',
+    }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+        <div>
+          <div style={{ color: '#6b6b80', letterSpacing: '1.6px', fontSize: 9, textTransform: 'uppercase' }}>
+            Language Vitality
+          </div>
+          <div style={{ color: 'rgba(196,181,253,0.5)', fontSize: 8.5, marginTop: 2 }}>
+            UNESCO Atlas · 7,168 languages
+          </div>
+        </div>
+        {/* expand/collapse detail */}
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
+            color: '#a78bfa', borderRadius: 6, padding: '2px 6px',
+            fontSize: 9, cursor: 'pointer', fontFamily: "'Space Mono',monospace",
+            lineHeight: 1.4, flexShrink: 0, marginTop: 1,
+          }}
+        >{expanded ? '−' : '+'}</button>
+      </div>
+
+      {/* 270° donut arc */}
+      <svg width={120} height={106} style={{ display: 'block', margin: '10px auto 4px' }}>
+        <g transform={`rotate(135, ${CX}, ${CY})`}>
+          {/* gray track */}
+          <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="rgba(255,255,255,0.05)" strokeWidth={SW}
+            strokeDasharray={`${sweepLen} ${C - sweepLen}`} />
+          {/* viable — gold */}
+          <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="#f5a623" strokeWidth={SW} strokeLinecap="butt"
+            strokeDasharray={`${Math.max(0, safeLen - 0.8)} ${C}`}
+            strokeDashoffset={0} />
+          {/* at-risk — purple */}
+          <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="#a78bfa" strokeWidth={SW} strokeLinecap="butt"
+            strokeDasharray={`${Math.max(0, riskLen - 0.8)} ${C}`}
+            strokeDashoffset={-safeLen} />
+          {/* extinct — ghostly white */}
+          <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="#e6e6f0" strokeWidth={SW} strokeLinecap="butt"
+            strokeDasharray={`${Math.max(0, extLen - 0.5)} ${C}`}
+            strokeDashoffset={-(safeLen + riskLen)} />
+          {/* small gap dot between segments (cosmetic separator) */}
+          {safeLen > 1 && <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="rgba(10,8,18,0.9)" strokeWidth={SW + 1} strokeLinecap="butt"
+            strokeDasharray={`0.5 ${C}`} strokeDashoffset={-safeLen} />}
+          {(safeLen + riskLen) > 1 && <circle cx={CX} cy={CY} r={R} fill="none"
+            stroke="rgba(10,8,18,0.9)" strokeWidth={SW + 1} strokeLinecap="butt"
+            strokeDasharray={`0.5 ${C}`} strokeDashoffset={-(safeLen + riskLen)} />}
+        </g>
+        {/* center: headline figure */}
+        <text x={CX} y={CY - 8} textAnchor="middle"
+          fill="#f0eee8" fontSize={20} fontWeight="800"
+          fontFamily="'Syne', sans-serif">
+          40%
+        </text>
+        <text x={CX} y={CY + 7} textAnchor="middle"
+          fill="#6b6b80" fontSize={8}
+          fontFamily="'Space Mono', monospace" letterSpacing={1}>
+          AT RISK
+        </text>
+        <text x={CX} y={CY + 18} textAnchor="middle"
+          fill="rgba(124,58,237,0.5)" fontSize={7.5}
+          fontFamily="'Space Mono', monospace">
+          of 7,000+ languages
+        </text>
+      </svg>
+
+      {/* Three summary rows */}
+      {UNESCO_BREAKDOWN.map(({ color, label, count }) => (
+        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+              display: 'inline-block', background: color,
+              boxShadow: `0 0 5px ${color}88`,
+            }} />
+            <span style={{ color: '#9090a8' }}>{label}</span>
+          </div>
+          <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{count}</span>
+        </div>
+      ))}
+
+      {/* Expanded UNESCO breakdown panel */}
+      {expanded && (
+        <div style={{
+          marginTop: 8,
+          background: 'rgba(124,58,237,0.07)',
+          border: '1px solid rgba(124,58,237,0.2)',
+          borderRadius: 8, padding: '9px 10px',
+        }}>
+          <div style={{ color: '#6b6b80', fontSize: 8, letterSpacing: '1.3px', textTransform: 'uppercase', marginBottom: 7 }}>
+            UNESCO threat levels
+          </div>
+          {UNESCO_DETAIL.map(({ label, count }) => {
+            const barW = Math.round((count / 2279) * 100);
+            return (
+              <div key={label} style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, fontSize: 8.5 }}>
+                  <span style={{ color: '#9090a8' }}>{label}</span>
+                  <span style={{ color: '#c4b5fd' }}>{count.toLocaleString()}</span>
+                </div>
+                <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+                  <div style={{
+                    height: '100%', width: `${barW}%`,
+                    background: 'linear-gradient(90deg,#7c3aed,#a78bfa)',
+                    borderRadius: 2,
+                    transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 8, fontSize: 8, color: 'rgba(124,58,237,0.55)', lineHeight: 1.5 }}>
+            Source: UNESCO Atlas of the<br />World's Languages in Danger
+          </div>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid rgba(124,58,237,0.15)', margin: '10px 0 8px' }} />
+
+      {/* Local sample mini-bar */}
+      <div style={{ color: '#6b6b80', fontSize: 8.5, marginBottom: 5 }}>
+        Mapped sample · {SAMPLE_RECORDINGS.length} dialects
+      </div>
+      <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
+        <div style={{ flex: LOCAL_SAFE,    background: '#f5a623', opacity: 0.8 }} />
+        <div style={{ flex: LOCAL_AT_RISK, background: '#a78bfa', opacity: 0.8 }} />
+        <div style={{ flex: LOCAL_EXTINCT, background: '#e6e6f0', opacity: 0.8 }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 8 }}>
+        <span>{LOCAL_SAFE} viable</span>
+        <span>{LOCAL_AT_RISK} at risk</span>
+        <span>{LOCAL_EXTINCT} extinct</span>
+      </div>
+    </div>
+  );
+}
+
+// ── TTS config: BCP-47 locale + short native-language sample for each pin ───
+// Indexed by SAMPLE_RECORDINGS id. Falls back gracefully when the OS has no
+// voice for that locale — the browser picks the closest available voice.
+const SAMPLE_TTS = {
+  1:  { lang: 'yo',    text: 'E kaaro. Bawo ni?' },
+  2:  { lang: 'en-NG', text: 'How far na? Wetin dey happen?' },
+  3:  { lang: 'ig',    text: 'Nnọọ, kedu ka ọ dị?' },
+  4:  { lang: 'en-NG', text: 'Mbok, ami doko?' },
+  5:  { lang: 'am',    text: 'Selam, dehna neh?' },
+  6:  { lang: 'ti',    text: 'Selam, kemey alo?' },
+  7:  { lang: 'om',    text: 'Akkam jirta?' },
+  8:  { lang: 'hi-IN', text: 'Yaar, kya scene hai? Ekdum solid plan hai.' },
+  9:  { lang: 'ks',    text: 'Aadaab, kya haal chaal?' },
+  10: { lang: 'ta-IN', text: 'Vanakkam, neenga epdi irukkeenga?' },
+  11: { lang: 'pa-IN', text: 'Sat sri akaal, ki haal hai?' },
+  12: { lang: 'jv',    text: 'Sugeng rawuh, piye kabare?' },
+  13: { lang: 'id',    text: 'Horas, apa kabar?' },
+  14: { lang: 'zh-HK', text: '你好，你今日點呀？' },
+  15: { lang: 'zh-CN', text: '侬好，今朝侬吃过饭了伐？' },
+  16: { lang: 'ja-JP', text: 'おおきに！なんでやねん！' },
+  17: { lang: 'ja-JP', text: 'んだ、そうだべ、んだなぁ。' },
+  18: { lang: 'ja-JP', text: 'はいさい、めんそーれ！' },
+  19: { lang: 'gd',    text: 'Madainn mhath, ciamar a tha thu?' },
+  20: { lang: 'cy',    text: 'Bore da, sut mae?' },
+  21: { lang: 'en-GB', text: 'Meur ras. Yma Kernow bys vyken.' },
+  22: { lang: 'eu',    text: 'Kaixo, zer moduz zaude?' },
+  23: { lang: 'it',    text: 'Ciao, comu siti? Tuttu bonu?' },
+  24: { lang: 'en-GB', text: "Alreet pet, howay man, ye gannin doon toon?" },
+  25: { lang: 'es-MX', text: "Ba'ax ka wa'alik? Bix a beel?" },
+  26: { lang: 'es-MX', text: 'Niltze. Quen tinemi in tonaltzin?' },
+  27: { lang: 'pt-BR', text: 'Oi mano, tudo bem? Saudade demais.' },
+  28: { lang: 'pt-BR', text: 'Oxente, meu fio! Tá doido, não?' },
+  29: { lang: 'es-CO', text: '¿Qué más, parce? Todo bien por acá.' },
+  30: { lang: 'tpi',   text: 'Apinun tru, ol manmeri.' },
+  31: { lang: 'ho',    text: 'Dahaka, o hairava.' },
+  32: { lang: 'ar-EG', text: 'أهلاً وسهلاً، إزيك النهارده؟' },
+  33: { lang: 'ar-EG', text: 'إيه أخبارك يا صعيدي؟' },
+  34: { lang: 'tt',    text: 'Исәнмесез, хәлегез ничек?' },
+  35: { lang: 'ru-RU', text: 'Привет, братан! Всё норм?' },
+};
+
+// ── HuggingFace: ylacombe/english_dialects ──────────────────────────────────
+// 6 British-Isles dialect regions, 17,877 samples, CC BY-SA 4.0
+// One sample per region is fetched at runtime from the Datasets Server API.
+const HF_DATASET   = 'ylacombe/english_dialects';
+const HF_API_BASE  = 'https://datasets-server.huggingface.co';
+
+const HF_DIALECT_CONFIGS = [
+  { config: 'irish_male',     language: 'Irish English',          location: 'Dublin, Ireland',       lat: 53.3498, lng: -6.2603  },
+  { config: 'welsh_male',     language: 'Welsh English',          location: 'Cardiff, Wales',        lat: 51.4816, lng: -3.1791  },
+  { config: 'scottish_male',  language: 'Scottish English',       location: 'Edinburgh, Scotland',   lat: 55.9533, lng: -3.1883  },
+  { config: 'northern_male',  language: 'Northern English',       location: 'Manchester, England',   lat: 53.4808, lng: -2.2426  },
+  { config: 'southern_male',  language: 'Southern English (RP)',  location: 'London, England',       lat: 51.5074, lng: -0.1278  },
+  { config: 'midlands_male',  language: 'Midlands English',       location: 'Birmingham, England',   lat: 52.4862, lng: -1.8904  },
+];
+
+async function fetchHFDialects() {
+  const results = await Promise.all(
+    HF_DIALECT_CONFIGS.map(async (cfg, i) => {
+      try {
+        const url = `${HF_API_BASE}/rows?dataset=${HF_DATASET}&config=${cfg.config}&split=train&offset=${i * 3}&length=1`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const json = await res.json();
+        const row  = json.rows?.[0]?.row;
+        if (!row) return null;
+        return {
+          id:           `hf_${cfg.config}`,
+          language:     cfg.language,
+          location:     cfg.location,
+          lat:          cfg.lat,
+          lng:          cfg.lng,
+          endangerment: 'safe',
+          hf_text:      row.text ?? '',
+          hf_audio_src: row.audio?.[0]?.src ?? row.audio?.src ?? '',
+          hf_speaker:   row.speaker_id ?? '',
+          hf_config:    cfg.config,
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return results.filter(Boolean);
+}
+
+function toGeoJSONFeature(rec) {
+  const tts = SAMPLE_TTS[rec.id] ?? null;
   return {
-    type: 'FeatureCollection',
-    features: recordings.map(r => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [r.longitude, r.latitude] },
-      properties: {
-        id: r.id,
-        language_name: r.language_name,
-        country_name: r.country_name,
-        region: r.region ?? '',
-        town: r.town ?? '',
-        description: r.description,
-        audio_url: r.audio_url,
-        last_speaker_flag: r.last_speaker_flag ?? false,
-        speaker_age_range: r.speaker_age_range ?? '',
-      },
-    })),
+    type: 'Feature',
+    properties: {
+      id:           String(rec.id),
+      language:     rec.language,
+      location:     rec.location,
+      endangerment: rec.endangerment,
+      pulse_image:  getPulseImageName(rec.endangerment),
+      hf_text:      rec.hf_text      ?? '',
+      hf_audio_src: rec.hf_audio_src ?? '',
+      hf_speaker:   rec.hf_speaker   ?? '',
+      tts_lang:     rec.tts_lang     ?? tts?.lang ?? 'en',
+      tts_text:     rec.tts_text     ?? tts?.text ?? rec.language,
+      has_audio:    rec.hasAudio !== false,
+      speakers:     rec.speakers  ?? 0,
+      description:  rec.description ?? '',
+    },
+    geometry: { type: 'Point', coordinates: [rec.lng, rec.lat] },
   };
+}
+
+function getPulseImageName(endangerment) {
+  if (endangerment === 'extinct') return 'pulse-extinct';
+  if (endangerment === 'safe' || endangerment === 'unknown') return 'pulse-safe';
+  return 'pulse-endangered';
 }
 
 function ReferenceSection({ recordings }) {
@@ -312,15 +762,44 @@ function CommunitySection({ uploads }) {
   );
 }
 
+function Breadcrumb({ crumbs }) {
+  if (!crumbs || crumbs.length <= 1) return null;
+  return (
+    <div className="breadcrumb-bar" style={{
+      position: 'fixed', top: '62px', left: '50%',
+      transform: 'translateX(-50%)',
+      display: 'flex', alignItems: 'center',
+      background: 'rgba(10,8,18,0.78)',
+      border: '1px solid rgba(124,58,237,0.22)',
+      borderRadius: '20px', padding: '6px 18px',
+      backdropFilter: 'blur(14px)',
+      zIndex: 30, whiteSpace: 'nowrap',
+    }}>
+      {crumbs.map((crumb, i) => (
+        <React.Fragment key={crumb.label}>
+          {i > 0 && <span className="crumb-sep">›</span>}
+          <button
+            className={`crumb-btn${i === crumbs.length - 1 ? ' crumb-current' : ''}`}
+            onClick={crumb.onClick}
+          >
+            {crumb.label}
+          </button>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 function DialectMap() {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
   const hoveredIdRef = useRef(null);
   const selectedIdRef = useRef(null);
-  const recordingsRef = useRef([]);
   const popupRef = useRef(null);
   const markersRef = useRef([]);
   const mapReadyRef = useRef(false);
+  const hfDataRef = useRef(null);       // HF samples once fetched
+  const sourceReadyRef = useRef(false); // true after recordings source is added to map
 
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
@@ -357,6 +836,22 @@ function DialectMap() {
     supabase.from('dialect_recordings').select('*').then(({ data }) => {
       if (data) setDialectRecordings(data);
     });
+  }, []);
+
+  // Fetch HuggingFace dialect samples and merge into the globe's recordings source
+  useEffect(() => {
+    fetchHFDialects().then(hfSamples => {
+      hfDataRef.current = hfSamples;
+      // If the map source is already ready, update it now; otherwise style.load will handle it
+      if (sourceReadyRef.current && mapRef.current?.getSource('recordings')) {
+        const existing = SAMPLE_RECORDINGS.map(toGeoJSONFeature);
+        const hf       = hfSamples.map(toGeoJSONFeature);
+        mapRef.current.getSource('recordings').setData({
+          type: 'FeatureCollection',
+          features: [...existing, ...hf],
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   // Re-render map markers whenever uploads or map-ready state changes
@@ -424,8 +919,34 @@ function DialectMap() {
     setTimelineIndex(i);
   }, [clearSpeech]);
 
-
   useEffect(() => {
+    // Play a real audio file URL — stops any previous clip first
+    window._playAudio = (src) => {
+      if (window._currentAudio) {
+        window._currentAudio.pause();
+        window._currentAudio.currentTime = 0;
+      }
+      window.speechSynthesis?.cancel();
+      const audio = new Audio(src);
+      window._currentAudio = audio;
+      audio.play().catch(() => {});
+    };
+
+    // TTS fallback for pins without a real recording
+    window._hearDialect = (lang, text) => {
+      if (window._currentAudio) {
+        window._currentAudio.pause();
+        window._currentAudio = null;
+      }
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang  = lang;
+      utter.rate  = 0.82;
+      utter.pitch = 1.0;
+      window.speechSynthesis.speak(utter);
+    };
+
     mapboxgl.accessToken = 'pk.eyJ1IjoiZ2RyNjY0IiwiYSI6ImNtbTNnemljNjAwb3cycXF5Y2VuZGNoamwifQ.OcRTxaB1n23tj98mtjnKCw';
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -442,7 +963,6 @@ function DialectMap() {
       setCommunityUploads(prev => [...prev]);
       mapRef.current.setFog({ color: 'rgba(10,8,18,0.9)', 'high-color': '#1a1030', 'horizon-blend': 0.06 });
 
-      // ── Country boundary layer (from Mapbox's built-in tileset) ──
       mapRef.current.addSource('countries', {
         type: 'vector',
         url: 'mapbox://mapbox.country-boundaries-v1',
@@ -520,6 +1040,9 @@ function DialectMap() {
 
       mapRef.current.on('click', 'country-fills', (e) => {
         if (!e.features.length) return;
+        // Don't trigger country selection when clicking a recording marker
+        if (mapRef.current.queryRenderedFeatures(e.point, { layers: ['recordings-layer'] }).length > 0) return;
+
         const feat = e.features[0];
         const rawName = feat.properties.name_en || feat.properties.iso_3166_1 || 'Unknown';
         const name = COUNTRY_NAME_MAP[rawName] || rawName;
@@ -541,134 +1064,181 @@ function DialectMap() {
         });
       });
 
-      // ── Recording pins with Mapbox built-in clustering ──
-      // Starts with whatever recordings are already loaded; updated via setData() if
-      // the Supabase fetch finishes after style.load fires.
+      // ── Sonic Bloom — WebGL animated image markers ──────────────────────────
+      // Canvas-based animated images render in WebGL and stick properly to the
+      // 3D globe surface, unlike DOM markers which are positioned in 2D screen space.
+
+      function makePulseImage(hex, phaseOffset) {
+        const size = 80;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return {
+          width: size,
+          height: size,
+          data: new Uint8Array(size * size * 4),
+          onAdd() {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            this.context = canvas.getContext('2d');
+          },
+          render() {
+            const duration = 2800;
+            const t  = ((performance.now() + phaseOffset)               % duration) / duration;
+            const t2 = ((performance.now() + phaseOffset + duration / 2) % duration) / duration;
+            const ctx = this.context;
+            ctx.clearRect(0, 0, size, size);
+
+            // Expanding ring 1
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, Math.max(0, (size / 2 - 2) * t), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${r},${g},${b},${Math.max(0, 0.85 - t * 1.1)})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Expanding ring 2 (half-phase offset for continuous bloom)
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, Math.max(0, (size / 2 - 2) * t2), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${r},${g},${b},${Math.max(0, 0.85 - t2 * 1.1)})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Soft glow halo behind core
+            const grd = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, 14);
+            grd.addColorStop(0, `rgba(${r},${g},${b},0.45)`);
+            grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, 14, 0, Math.PI * 2);
+            ctx.fillStyle = grd;
+            ctx.fill();
+
+            // Solid core dot
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, 4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${r},${g},${b},1)`;
+            ctx.fill();
+
+            this.data = ctx.getImageData(0, 0, size, size).data;
+            mapRef.current.triggerRepaint();
+            return true;
+          },
+        };
+      }
+
+      mapRef.current.addImage('pulse-safe',       makePulseImage('#f5a623', 0),    { pixelRatio: 2 });
+      mapRef.current.addImage('pulse-endangered',  makePulseImage('#a78bfa', 933),  { pixelRatio: 2 });
+      mapRef.current.addImage('pulse-extinct',     makePulseImage('#e6e6f0', 1866), { pixelRatio: 2 });
+
+      const initialFeatures = SAMPLE_RECORDINGS.map(toGeoJSONFeature);
       mapRef.current.addSource('recordings', {
         type: 'geojson',
-        data: recordingsToGeoJSON(recordingsRef.current),
-        cluster: true,
-        clusterMaxZoom: 9,   // stop clustering above zoom 9
-        clusterRadius: 50,   // px radius to merge into one cluster
+        data: { type: 'FeatureCollection', features: initialFeatures },
       });
+      sourceReadyRef.current = true;
+      // Merge HF samples if they arrived before style.load fired
+      if (hfDataRef.current?.length) {
+        mapRef.current.getSource('recordings').setData({
+          type: 'FeatureCollection',
+          features: [...initialFeatures, ...hfDataRef.current.map(toGeoJSONFeature)],
+        });
+      }
 
-      // Cluster bubble
       mapRef.current.addLayer({
-        id: 'clusters',
-        type: 'circle',
-        source: 'recordings',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': [
-            'step', ['get', 'point_count'],
-            '#a78bfa', 5,   // < 5 recordings → light purple
-            '#7c3aed', 20,  // 5–19 → purple
-            '#5b21b6',      // 20+ → deep purple
-          ],
-          'circle-radius': ['step', ['get', 'point_count'], 16, 5, 22, 20, 30],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': 'rgba(255,255,255,0.5)',
-          'circle-opacity': 0.88,
-        },
-      });
-
-      // Count label on cluster
-      mapRef.current.addLayer({
-        id: 'cluster-count',
+        id: 'recordings-layer',
         type: 'symbol',
         source: 'recordings',
-        filter: ['has', 'point_count'],
         layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-          'text-size': 12,
-        },
-        paint: { 'text-color': '#fff' },
-      });
-
-      // Individual pin — red for last-speaker languages, purple otherwise
-      mapRef.current.addLayer({
-        id: 'unclustered-point',
-        type: 'circle',
-        source: 'recordings',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': [
-            'case',
-            ['==', ['get', 'last_speaker_flag'], true], '#ef4444',
-            '#a78bfa',
-          ],
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 5, 10, 9],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff',
-          'circle-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.75, 8, 1],
+          'icon-image': ['get', 'pulse_image'],
+          'icon-size': 1,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
         },
       });
 
-      // Click cluster → zoom to expand it
-      mapRef.current.on('click', 'clusters', (e) => {
-        const [feat] = mapRef.current.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        if (!feat) return;
-        mapRef.current.getSource('recordings').getClusterExpansionZoom(
-          feat.properties.cluster_id,
-          (err, zoom) => {
-            if (err) return;
-            mapRef.current.easeTo({ center: feat.geometry.coordinates, zoom: zoom + 0.5 });
-          }
-        );
-      });
-
-      mapRef.current.on('mouseenter', 'clusters', () => {
-        mapRef.current.getCanvas().style.cursor = 'pointer';
-      });
-      mapRef.current.on('mouseleave', 'clusters', () => {
-        mapRef.current.getCanvas().style.cursor = '';
-      });
-
-      // Click individual pin → popup with playable audio
-      mapRef.current.on('click', 'unclustered-point', (e) => {
-        const props = e.features[0].properties;
+      mapRef.current.on('click', 'recordings-layer', (e) => {
+        if (!e.features.length) return;
+        const props  = e.features[0].properties;
         const coords = e.features[0].geometry.coordinates.slice();
+        const color  = ENDANGERMENT_COLORS[props.endangerment] ?? ENDANGERMENT_COLORS.safe;
+        const badgeBg     = `${color}22`;
+        const badgeBorder = `${color}66`;
+
+        const speakerLine = props.speakers > 0
+          ? `<div style="font-size:10px;color:#6b6b80;margin-top:5px;">~${Number(props.speakers).toLocaleString()} speakers</div>`
+          : '';
+
+        const header = `
+          <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:5px;">${props.language}</div>
+          <div style="font-size:10px;color:#9090a8;margin-bottom:5px;">📍 ${props.location}</div>
+          <div style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9.5px;
+            background:${badgeBg};border:1px solid ${badgeBorder};color:${color};">
+            ${ENDANGERMENT_LABELS[props.endangerment] ?? ''}
+          </div>
+          ${speakerLine}`;
+
+        let body;
+        if (props.has_audio) {
+          // ── Pin with audio: real HF recording takes priority over TTS ──
+          const safeText = (props.tts_text ?? props.language).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const safeLang = (props.tts_lang ?? 'en').replace(/'/g, '');
+          const safeSrc  = (props.hf_audio_src ?? '').replace(/'/g, '');
+
+          const onclick = safeSrc
+            ? `window._playAudio('${safeSrc}')`
+            : `window._hearDialect('${safeLang}','${safeText}')`;
+
+          const transcript = props.hf_text
+            ? `<div style="margin-top:7px;font-size:9px;color:#7a7a8c;font-style:italic;line-height:1.6;">"${props.hf_text}"</div>`
+            : '';
+          const sourceTag = safeSrc
+            ? `<div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🤗 real recording · CC BY-SA 4.0</div>`
+            : `<div style="margin-top:5px;font-size:7.5px;color:rgba(124,58,237,0.45);">🔊 synthesised voice</div>`;
+
+          body = `
+            <button onclick="${onclick}"
+              style="margin-top:9px;width:100%;background:rgba(124,58,237,0.15);
+                border:1px solid rgba(124,58,237,0.35);color:#c4b5fd;border-radius:7px;
+                padding:7px 0;font-family:'Space Mono',monospace;font-size:10px;
+                cursor:pointer;letter-spacing:0.5px;">
+              ▶ Hear sample
+            </button>
+            ${transcript}
+            ${sourceTag}`;
+        } else {
+          // ── Placeholder pin — no audio yet ──
+          const desc = props.description
+            ? `<p style="font-size:10.5px;color:#9090a8;line-height:1.7;margin:10px 0 0;">${props.description}</p>`
+            : '';
+          body = `
+            ${desc}
+            <div style="margin-top:12px;padding:10px 12px;border-radius:8px;
+              background:rgba(124,58,237,0.07);border:1px dashed rgba(124,58,237,0.28);text-align:center;">
+              <div style="font-size:9.5px;color:#5a5a70;margin-bottom:4px;">No recordings in our archive yet.</div>
+              <div style="font-size:10px;color:#a78bfa;">Be the first to contribute one ↗</div>
+            </div>`;
+        }
 
         if (popupRef.current) popupRef.current.remove();
-
-        const location = [props.town, props.region, props.country_name].filter(Boolean).join(', ');
-        const urgency = props.last_speaker_flag
-          ? '<span style="background:#ef4444;color:#fff;padding:1px 7px;border-radius:10px;font-size:10px;vertical-align:middle;margin-left:6px;">last speakers</span>'
-          : '';
-        const ageLabel = props.speaker_age_range
-          ? `<div style="font-size:10px;color:#6b6b80;margin-top:2px;">Speaker age: ${props.speaker_age_range}</div>`
-          : '';
-        const audio = props.audio_url
-          ? `<audio controls src="${props.audio_url}" style="width:100%;height:30px;margin-top:10px;accent-color:#7c3aed;"></audio>`
-          : '';
-
-        popupRef.current = new mapboxgl.Popup({ offset: 14, maxWidth: '290px' })
+        popupRef.current = new mapboxgl.Popup({ offset: 16, maxWidth: '290px' })
           .setLngLat(coords)
-          .setHTML(`
-            <div style="padding:2px;">
-              <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:4px;">
-                ${props.language_name}${urgency}
-              </div>
-              <div style="font-size:10px;color:#9090a8;margin-bottom:6px;">📍 ${location}</div>
-              ${ageLabel}
-              <div style="font-size:11px;color:#e0ddf0;line-height:1.65;margin-top:6px;">${props.description}</div>
-              ${audio}
-            </div>
-          `)
+          .setHTML(`<div style="padding:2px;">${header}${body}</div>`)
           .addTo(mapRef.current);
       });
 
-      mapRef.current.on('mouseenter', 'unclustered-point', () => {
+      mapRef.current.on('mouseenter', 'recordings-layer', () => {
         mapRef.current.getCanvas().style.cursor = 'pointer';
       });
-      mapRef.current.on('mouseleave', 'unclustered-point', () => {
+      mapRef.current.on('mouseleave', 'recordings-layer', () => {
         mapRef.current.getCanvas().style.cursor = '';
       });
     });
 
     return () => {
       window.speechSynthesis?.cancel();
+      if (window._currentAudio) { window._currentAudio.pause(); delete window._currentAudio; }
+      delete window._hearDialect;
+      delete window._playAudio;
       if (popupRef.current) popupRef.current.remove();
       mapRef.current?.remove();
     };
@@ -686,6 +1256,11 @@ function DialectMap() {
     setSelectedCountry(null);
     setIsSpeaking(false);
   }, []);
+
+  const flyToWorld = useCallback(() => {
+    closePanel();
+    mapRef.current?.flyTo({ center: [10, 20], zoom: 2, speed: 0.7 });
+  }, [closePanel]);
 
   const s = {
     panel: {
@@ -708,14 +1283,49 @@ function DialectMap() {
     },
   };
 
+  const LEGEND = [
+    { color: '#f5a623',  label: 'Active dialect' },
+    { color: '#a78bfa',  label: 'Endangered / elderly speakers' },
+    { color: '#e6e6f0',  label: 'Historical archive' },
+  ];
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <style>{PANEL_CSS}</style>
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
+      <EndangermentMeterWidget />
+
       {!selectedCountry && (
-        <div className="hint-pill">Click any country to explore its dialects &amp; accent history</div>
+        <div className="hint-pill">Click any country · Click a pulse to identify a dialect</div>
       )}
+
+      <Breadcrumb crumbs={[
+        { label: 'World', onClick: flyToWorld },
+        ...(selectedCountry ? [{ label: selectedCountry }] : []),
+      ]} />
+
+      {/* Sonic Bloom legend */}
+      <div style={{
+        position: 'fixed', bottom: 70, left: 16,
+        background: 'rgba(10,8,18,0.82)', border: '1px solid rgba(124,58,237,0.28)',
+        borderRadius: 12, padding: '10px 14px',
+        fontFamily: "'Space Mono',monospace", fontSize: 10, color: '#9090a8',
+        backdropFilter: 'blur(8px)', zIndex: 10, lineHeight: 1,
+      }}>
+        <div style={{ marginBottom: 8, color: '#6b6b80', letterSpacing: '1.5px', fontSize: 9, textTransform: 'uppercase' }}>
+          Sonic Bloom
+        </div>
+        {LEGEND.map(({ color, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: color, boxShadow: `0 0 6px ${color}`, display: 'inline-block',
+            }} />
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
 
       {selectedCountry && (
         <div className="dialect-panel" style={s.panel}>
@@ -723,7 +1333,6 @@ function DialectMap() {
 
           {dialectInfo ? (
             <>
-              {/* ── Header ── */}
               <div style={{ paddingRight: '28px', marginBottom: '18px' }}>
                 <div style={s.label}>{dialectInfo.region}</div>
                 <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: '21px', lineHeight: 1.2, color: '#f0eee8' }}>
@@ -732,67 +1341,39 @@ function DialectMap() {
                 <div style={{ width: '36px', height: '2px', background: 'linear-gradient(90deg,#7c3aed,transparent)', marginTop: '10px' }} />
               </div>
 
-              {/* ── Dialect Tags ── */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={s.label}>Primary Dialects</div>
                 {dialectInfo.primaryDialects.map(d => <span key={d} className="d-tag">{d}</span>)}
               </div>
 
-              {/* ── Overview ── */}
               <p style={{ fontSize: '11.5px', color: '#9090a8', lineHeight: '1.75', marginBottom: '0', paddingLeft: '11px', borderLeft: '2px solid rgba(124,58,237,0.35)' }}>
                 {dialectInfo.overview}
               </p>
 
               <div style={s.divider} />
 
-              {/* ── Timeline ── */}
               <div style={{ marginBottom: '18px' }}>
                 <div style={{ ...s.label, marginBottom: '14px' }}>Accent Evolution Timeline</div>
-
-                {/* Dot track */}
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                   {dialectInfo.timeline.map((t, i) => (
                     <React.Fragment key={i}>
-                      <div
-                        className={`era-dot${i === timelineIndex ? ' active' : ''}`}
-                        onClick={() => setEra(i)}
-                        title={`${t.era} · ${t.year}`}
-                      />
+                      <div className={`era-dot${i === timelineIndex ? ' active' : ''}`} onClick={() => setEra(i)} title={`${t.era} · ${t.year}`} />
                       {i < totalEras - 1 && (
-                        <div style={{
-                          flex: 1, height: '2px', transition: 'background 0.3s',
-                          background: i < timelineIndex ? 'rgba(124,58,237,0.65)' : 'rgba(124,58,237,0.15)',
-                        }} />
+                        <div style={{ flex: 1, height: '2px', transition: 'background 0.3s', background: i < timelineIndex ? 'rgba(124,58,237,0.65)' : 'rgba(124,58,237,0.15)' }} />
                       )}
                     </React.Fragment>
                   ))}
                 </div>
-
-                {/* Year labels */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   {dialectInfo.timeline.map((t, i) => (
-                    <span
-                      key={i}
-                      onClick={() => setEra(i)}
-                      style={{ fontSize: '9px', cursor: 'pointer', textAlign: 'center', transition: 'color 0.2s', color: i === timelineIndex ? '#a78bfa' : '#5a5a70' }}
-                    >
+                    <span key={i} onClick={() => setEra(i)} style={{ fontSize: '9px', cursor: 'pointer', textAlign: 'center', transition: 'color 0.2s', color: i === timelineIndex ? '#a78bfa' : '#5a5a70' }}>
                       {t.year}
                     </span>
                   ))}
                 </div>
-
-                {/* Slider */}
-                <input
-                  type="range"
-                  className="tl-slider"
-                  min={0}
-                  max={totalEras - 1}
-                  value={timelineIndex}
-                  onChange={e => setEra(Number(e.target.value))}
-                />
+                <input type="range" className="tl-slider" min={0} max={totalEras - 1} value={timelineIndex} onChange={e => setEra(Number(e.target.value))} />
               </div>
 
-              {/* ── Current Era card ── */}
               {currentEra && (
                 <div style={s.eraBox}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
@@ -804,28 +1385,17 @@ function DialectMap() {
                       {currentEra.accent}
                     </div>
                   </div>
-
-                  <p style={{ fontSize: '11.5px', color: '#9090a8', lineHeight: '1.75', marginBottom: '0' }}>
-                    {currentEra.description}
-                  </p>
-
-                  {/* Sample phrase */}
+                  <p style={{ fontSize: '11.5px', color: '#9090a8', lineHeight: '1.75', marginBottom: '0' }}>{currentEra.description}</p>
                   <div style={s.sampleBox}>
                     <div style={s.label}>Sample Phrase</div>
-                    <div style={{ fontSize: '12.5px', color: '#e0ddf0', fontStyle: 'italic', lineHeight: '1.55', marginTop: '4px' }}>
-                      "{currentEra.sample}"
-                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#e0ddf0', fontStyle: 'italic', lineHeight: '1.55', marginTop: '4px' }}>"{currentEra.sample}"</div>
                   </div>
-
                   <button className="speak-btn" onClick={speakSample} disabled={isSpeaking}>
-                    {isSpeaking
-                      ? <span style={{ animation: 'pulse 1.1s infinite', display: 'inline-block' }}>◉ Speaking…</span>
-                      : '▶  Hear Pronunciation'}
+                    {isSpeaking ? <span style={{ animation: 'pulse 1.1s infinite', display: 'inline-block' }}>◉ Speaking…</span> : '▶  Hear Pronunciation'}
                   </button>
                 </div>
               )}
 
-              {/* ── Era navigation ── */}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="era-nav-btn" onClick={() => goEra(-1)} disabled={timelineIndex === 0}>← Prev Era</button>
                 <button className="era-nav-btn" onClick={() => goEra(1)} disabled={timelineIndex === totalEras - 1}>Next Era →</button>
@@ -838,7 +1408,6 @@ function DialectMap() {
               <CommunitySection uploads={communityForCountry} />
             </>
           ) : (
-            /* ── No data fallback ── */
             <div style={{ paddingRight: '28px' }}>
               <div style={s.label}>Dialect Explorer</div>
               <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: '21px', color: '#f0eee8', marginBottom: '20px' }}>{selectedCountry}</div>

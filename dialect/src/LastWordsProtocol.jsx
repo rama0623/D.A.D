@@ -66,10 +66,11 @@ export default function LastWordsProtocol({ initialLanguage = '' }) {
   const [elapsed, setElapsed]     = useState(0);
   const [saving, setSaving]       = useState(false);
 
-  const mrRef     = useRef(null);
-  const chunksRef = useRef([]);
-  const blobsRef  = useRef({});
-  const timerRef  = useRef(null);
+  const mrRef          = useRef(null);
+  const chunksRef      = useRef([]);
+  const blobsRef       = useRef({});
+  const timerRef       = useRef(null);
+  const uploadedUrls   = useRef({});   // stepId → public audio URL
 
   const step = STEPS[activeIdx];
   const done = completed.size;
@@ -118,7 +119,9 @@ export default function LastWordsProtocol({ initialLanguage = '' }) {
       try {
         const path = `protocol/${language.replace(/\s+/g, '_')}_${step.id}_${Date.now()}.webm`;
         await supabase.storage.from('recordings').upload(path, blob, { contentType: 'audio/webm', upsert: true });
-      } catch { /* non-fatal */ }
+        const { data: { publicUrl } } = supabase.storage.from('recordings').getPublicUrl(path);
+        uploadedUrls.current[step.id] = publicUrl;
+      } catch { /* non-fatal — step still counts as completed */ }
     }
     const next = new Set([...completed, step.id]);
     setCompleted(next);
@@ -145,12 +148,51 @@ export default function LastWordsProtocol({ initialLanguage = '' }) {
     setSaving(true);
     if (supabase && language) {
       try {
-        await supabase.from('community_uploads').insert({
-          language_name: language,
-          country: location || 'Unknown',
-          description: `Last Words Protocol — ${doneSet.size}/${total} categories recorded`,
-          consent_given: true,
-        });
+        // Parse "Town, Country" from the free-text location field
+        const parts = location.split(',').map(p => p.trim()).filter(Boolean);
+        const country = parts.length > 1 ? parts[parts.length - 1] : (parts[0] || 'Unknown');
+        const town    = parts.length > 1 ? parts[0] : null;
+
+        // Geocode so pins appear on the globe
+        let lat = null, lng = null;
+        try {
+          const q = encodeURIComponent(location || country);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+            { headers: { Accept: 'application/json' } }
+          );
+          const geo = await res.json();
+          if (geo.length > 0) { lat = parseFloat(geo[0].lat); lng = parseFloat(geo[0].lon); }
+        } catch { /* geocoding failure is non-fatal */ }
+
+        // One row per completed step that has a saved audio URL
+        const rows = STEPS
+          .filter(s => doneSet.has(s.id) && uploadedUrls.current[s.id])
+          .map(s => ({
+            language_name: language,
+            country,
+            town,
+            latitude:  lat,
+            longitude: lng,
+            description: `[Last Words Protocol · ${s.label}] ${s.why}`,
+            audio_url: uploadedUrls.current[s.id],
+            consent_given: true,
+          }));
+
+        if (rows.length > 0) {
+          await supabase.from('community_uploads').insert(rows);
+        } else {
+          // Fallback: summary row with no audio if storage failed for every step
+          await supabase.from('community_uploads').insert({
+            language_name: language,
+            country,
+            town,
+            latitude:  lat,
+            longitude: lng,
+            description: `Last Words Protocol — ${doneSet.size}/${total} categories recorded (audio pending)`,
+            consent_given: true,
+          });
+        }
       } catch { /* non-fatal */ }
     }
     setSaving(false);
@@ -266,7 +308,7 @@ export default function LastWordsProtocol({ initialLanguage = '' }) {
         </div>
         <button
           className="lwp-btn"
-          onClick={() => { setPhase('intro'); setActiveIdx(0); setCompleted(new Set()); setStepPhase('ready'); setLanguage(''); setLocation(''); blobsRef.current = {}; }}
+          onClick={() => { setPhase('intro'); setActiveIdx(0); setCompleted(new Set()); setStepPhase('ready'); setLanguage(''); setLocation(''); blobsRef.current = {}; uploadedUrls.current = {}; }}
           style={{ padding: '11px 32px', background: 'rgba(124,58,237,0.2)', border: '1px solid rgba(124,58,237,0.4)', color: '#c4b5fd', fontSize: 12 }}
         >
           Record another language
